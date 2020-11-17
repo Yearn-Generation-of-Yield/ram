@@ -10,7 +10,6 @@ const UniswapV2Router02 = artifacts.require('UniswapV2Router02');
 contract('Liquidity Generation tests', ([alice, john, minter, dev, burner, clean, clean2, clean3, clean4, clean5]) => {
 
     beforeEach(async () => {
-
         this.factory = await UniswapV2Factory.new(alice, { from: alice });
         this.weth = await WETH9.new({ from: john });
         this.router = await UniswapV2Router02.new(this.factory.address, this.weth.address, { from: alice });
