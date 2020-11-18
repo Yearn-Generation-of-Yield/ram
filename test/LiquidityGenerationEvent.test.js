@@ -7,7 +7,7 @@ const UniswapV2Factory = artifacts.require('UniswapV2Factory');
 const FeeApprover = artifacts.require('FeeApprover');
 const UniswapV2Router02 = artifacts.require('UniswapV2Router02');
 
-contract('Liquidity Generation tests', ([alice, john, minter, dev, burner, clean, clean2, clean3, clean4, clean5]) => {
+contract('Liquidity Generation tests', ([alice, john, dev, team, regenerator, clean, clean2, clean3, clean4, clean5]) => {
 
     beforeEach(async () => {
         this.factory = await UniswapV2Factory.new(alice, { from: alice });
@@ -21,7 +21,7 @@ contract('Liquidity Generation tests', ([alice, john, minter, dev, burner, clean
 
         await this.ram.setShouldTransferChecker(this.feeapprover.address, { from: alice });
         this.ramvault = await RamVault.new({ from: alice });
-        await this.ramvault.initialize(this.ram.address, dev, clean5);
+        await this.ramvault.initialize(this.ram.address, dev, team, regenerator, clean5);
         await this.feeapprover.setRamVaultAddress(this.ramvault.address, { from: alice });
     });
 
@@ -83,9 +83,9 @@ contract('Liquidity Generation tests', ([alice, john, minter, dev, burner, clean
     it("Should create the pair liquidity with lots of eth", async () => {
         assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "0");
         assert.equal((await this.ram.balanceOf(this.ram.address)).valueOf().toString(), 10000e18);
-        await this.ram.addLiquidity(true, { from: clean, value: '9899998457311999999700' });
-        assert.equal((await this.ram.ethContributed(clean)).valueOf().toString(), '9899998457311999999700');
-        assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "9899998457311999999700");
+        await this.ram.addLiquidity(true, { from: clean, value: '9898457311999999700' });
+        assert.equal((await this.ram.ethContributed(clean)).valueOf().toString(), '9898457311999999700');
+        assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "9898457311999999700");
         await time.increase(60 * 60 * 24 * 7 + 1);
         this.ramWETHPair = await UniswapV2Pair.at(await this.factory.getPair(this.weth.address, this.ram.address));
         await this.ram.addLiquidityToUniswapRAMxWETHPair();
@@ -97,9 +97,9 @@ contract('Liquidity Generation tests', ([alice, john, minter, dev, burner, clean
     it("Should give out LP tokens up to 1 LP value precision", async () => {
         assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "0");
         assert.equal((await this.ram.balanceOf(this.ram.address)).valueOf().toString(), 10000e18);
-        await this.ram.addLiquidity(true, { from: clean2, value: '9899998457311999999700' });
-        assert.equal((await this.ram.ethContributed(clean2)).valueOf().toString(), '9899998457311999999700');
-        assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "9899998457311999999700");
+        await this.ram.addLiquidity(true, { from: clean2, value: '9898457311999999700' });
+        assert.equal((await this.ram.ethContributed(clean2)).valueOf().toString(), '9898457311999999700');
+        assert.equal((await web3.eth.getBalance(this.ram.address)).valueOf().toString(), "9898457311999999700");
         await time.increase(60 * 60 * 24 * 7 + 1);
         this.ramWETHPair = await UniswapV2Pair.at(await this.factory.getPair(this.weth.address, this.ram.address));
         await this.ram.addLiquidityToUniswapRAMxWETHPair();
