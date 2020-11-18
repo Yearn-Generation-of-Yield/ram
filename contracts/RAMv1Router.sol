@@ -1,22 +1,26 @@
 pragma solidity 0.6.12;
 
-
-
-import "./IFeeApprover.sol";
-
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+import "./uniswapv2/interfaces/IWETH.sol";
+import './uniswapv2/libraries/Math.sol';
+import "./uniswapv2/libraries/UniswapV2Library.sol";
+import "./IFeeApprover.sol";
+import "./IRAMVault.sol";
 
-/// Please do not use this contract until its done, and tested.
-/// Undefined behaviour might happen.
-/// This code is shared/provided WITHOUT any warranties of any kind.
-
-/// This contract is supposed to streamline liquidity additions
-// By allowing people to put in any amount of ETH or RAM and get LP tokens back
-contract RAMv1Router is OwnableUpgradeSafe {
-    IFeeApprover public _feeApprover;
-    mapping (address => bool) public ramChosen;
-
+// This contract is supposed to streamline liquidity additions
+// By allowing people to put in any amount of ETH or YGY and get LP tokens back
+contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     mapping(address => uint256) public hardRAM;
+
+    // RAM protocol variables
+    address public _RAMToken;
+    address public _RAMWETHPair;
+    IFeeApprover public _feeApprover;
+    IRAMVault public _RAMVault;
+    IWETH public _WETH;
+    address public _uniV2Factory;
 
     // RNG variables
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
@@ -26,14 +30,6 @@ contract RAMv1Router is OwnableUpgradeSafe {
     uint256 public randomResult;
     bytes32 internal keyHash;
     uint256 internal fee;
-
-    // RAM protocol variables
-    address public _RAMToken;
-    address public _RAMWETHPair;
-    IFeeApprover public _feeApprover;
-    IRAMVault public _RAMVault;
-    IWETH public _WETH;
-    address public _uniV2Factory;
 
     constructor(address RAMToken, address WETH, address uniV2Factory, address RAMWethPair, address feeApprover, address RAMVault)
         VRFConsumerBase(
@@ -100,7 +96,8 @@ contract RAMv1Router is OwnableUpgradeSafe {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        _feeApprover.sync();
+        // TODO: test sync method
+        sync();
     }
 
     function _addLiquidity(uint256 RAMAmount, uint256 wethAmount, address payable to, bool autoStake) internal {

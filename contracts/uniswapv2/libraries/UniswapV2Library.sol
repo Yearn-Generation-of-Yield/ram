@@ -1,7 +1,7 @@
 pragma solidity >=0.5.0;
 
-import '@uniswap/v2-ram/contracts/interfaces/IUniswapV2Pair.sol';
-import '@uniswap/v2-ram/contracts/interfaces/IUniswapV2Factory.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import "@nomiclabs/buidler/console.sol";
 
 import "./SafeMath.sol";

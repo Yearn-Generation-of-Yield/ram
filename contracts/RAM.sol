@@ -1,14 +1,10 @@
 pragma solidity 0.6.12;
 
-
 import "./NBUNIERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
-
 // RamToken with Governance.
 contract RAM is NBUNIERC20 {
-
 
         /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with

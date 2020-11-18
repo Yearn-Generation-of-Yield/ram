@@ -7,13 +7,13 @@ import "./INBUNIERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./IFeeApprover.sol";
-import "./IRamVault.sol";
+import "./IRAMVault.sol";
 import "@nomiclabs/buidler/console.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // for WETH
 import "./uniswapv2/interfaces/IUniswapV2Factory.sol"; // interface factorys
 import "./uniswapv2/interfaces/IUniswapV2Router02.sol"; // interface factorys
-import '@uniswap/v2-ram/contracts/interfaces/IUniswapV2Pair.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "./uniswapv2/interfaces/IWETH.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -174,7 +174,7 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     // Designed to be as simple as possible
     function emergencyDrain24hAfterLiquidityGenerationEventIsDone() public onlyOwner {
         require(contractStartTimestamp.add(8 days) < block.timestamp, "Liquidity generation grace period still ongoing"); // About 24h after liquidity generation happens
-        (bool success, ) = msg.sender.call.value(address(this).balance)("");
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success, "Transfer failed.");
         _balances[msg.sender] = _balances[address(this)];
         _balances[address(this)] = 0;
@@ -446,7 +446,7 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
             _balances[feeDistributor] = _balances[feeDistributor].add(transferToFeeDistributorAmount);
             emit Transfer(sender, feeDistributor, transferToFeeDistributorAmount);
             if(feeDistributor != address(0)){
-                IRamVault(feeDistributor).addPendingRewards(transferToFeeDistributorAmount);
+                IRAMVault(feeDistributor).addPendingRewards(transferToFeeDistributorAmount);
             }
         }
     }
