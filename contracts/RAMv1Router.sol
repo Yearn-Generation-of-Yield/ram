@@ -92,7 +92,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     // addLiquidityYGYOnly transfers approved YGY tokens to the contract and calls _swapYGYForRAMAndAddLiquidity
     function addLiquidityYGYOnly(address payable to, uint256 amount, bool autoStake) public payable {
         require(to != address(0), "Invalid address");
-        require(amount.div(2) > 2, "Insufficient token amount");
+        require(amount.div(2) > 0, "Insufficient token amount");
         require(IERC20(_YGYToken).transferFrom(to, address(this), amount), "Approve tokens first");
 
         hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(amount);
