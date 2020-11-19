@@ -168,7 +168,6 @@ contract RAMVault is OwnableUpgradeSafe {
 
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
 
-
         poolInfo.push(
             PoolInfo({
                 token: _token,
@@ -279,10 +278,11 @@ contract RAMVault is OwnableUpgradeSafe {
         // Transfer pending tokens to user
         updateAndPayOutPending(_pid, msg.sender);
 
-        //Transfer in the amounts from user
         // save gas
         if(_amount > 0) {
             pool.token.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+            // Add amount to user's deposited amount
             user.amount = user.amount.add(_amount);
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.

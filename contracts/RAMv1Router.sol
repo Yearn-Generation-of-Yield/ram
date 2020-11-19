@@ -22,6 +22,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     IWETH public _WETH;
     address public _uniV2Factory;
 
+    // Governance and regenerator tax
+    address public governance;
+    uint256 public regeneratorTax;
+
     // RNG variables
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
     uint public constant SCALE = 10;
@@ -50,6 +54,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         fee = 0.1 * 10 ** 18; // 0.1 LINK
     }
 
+    function setGovernance(address _governance) public onlyOwner {
+        governance = _governance;
+    }
+
+    function setRegeneratorTax(uint256 _regeneratorTax) public {
+        require(msg.sender != governance, "Locked to governance");
+        regeneratorTax = _regeneratorTax;
+    }
 
     function refreshApproval() public {
         IUniswapV2Pair(_RAMWETHPair).approve(address(_RAMVault), uint(-1));
@@ -76,6 +88,19 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
     // Function get RAM needed to pair per ETH
 
+    // ---------------------------------------------------------------
+    // TODO: add regenerator tax to IRAMv1Router
+    // ---------------------------------------------------------------
+    // // Calculate taxed and deposit amount
+    // int256 taxedAmount = _amount.mul(regeneratorTax).div(100);
+    // int256 depositAmount = _amount.sub(taxedAmount);
+
+    // // Add deposit amount to user's deposited amount
+    // user.amount = user.amount.add(depositAmount);
+
+    // // Send tax directly to regenerator
+    // pool.token.transfer(regeneratoraddr, taxedAmount);
+    // ---------------------------------------------------------------
 
     function addLiquidityETHOnly(address payable to, bool autoStake) public payable {
         require(to != address(0), "Invalid address");
