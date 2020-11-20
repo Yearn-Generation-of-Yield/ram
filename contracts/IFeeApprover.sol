@@ -17,6 +17,7 @@ interface IFeeApprover {
     function setTokenUniswapPair(address _tokenUniswapPair) external;
 
     function setRamTokenAddress(address _ramTokenAddress) external;
+    function setYgyTokenAddress(address _ygyTokenAddress) external;
     function updateTxState() external;
     function calculateAmountsAfterFee(
         address sender,

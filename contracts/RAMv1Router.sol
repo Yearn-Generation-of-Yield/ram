@@ -84,20 +84,21 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         (address token0, address token1) = UniswapV2Library.sortTokens(address(_WETH), _YGYToken);
         IUniswapV2Pair(_YGYWETHPair).swap(_YGYToken == token0 ? outYGY : 0, _YGYToken == token1 ? outYGY : 0, address(this), "");
 
-        hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(buyAmount);
+        hardRAMInYGY[to] = hardRAMInYGY[to].add(outYGY);
 
-        _swapYGYForRAMAndAddLiquidity(buyAmount.div(2), to, autoStake);
+        _swapYGYForRAMAndAddLiquidity(outYGY.div(2), to, autoStake);
     }
 
     // addLiquidityYGYOnly transfers approved YGY tokens to the contract and calls _swapYGYForRAMAndAddLiquidity
-    function addLiquidityYGYOnly(address payable to, uint256 amount, bool autoStake) public payable {
-        require(to != address(0), "Invalid address");
+    function addLiquidityYGYOnly(uint256 amount, bool autoStake) public payable {
+        // require(to != address(0), "Invalid address");
         require(amount.div(2) > 0, "Insufficient token amount");
-        require(IERC20(_YGYToken).transferFrom(to, address(this), amount), "Approve tokens first");
+        require(IERC20(_YGYToken).transferFrom(msg.sender, address(this), amount), "Approve tokens first");
 
         hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(amount);
 
-        _swapYGYForRAMAndAddLiquidity(amount.div(2), to, autoStake);
+        // _swapYGYForRAMAndAddLiquidity(amount, msg.sender, autoStake);
+        _swapYGYForRAMAndAddLiquidity(amount.div(2), msg.sender, autoStake);
     }
 
     // With buyAmount*2 amount of YGY tokens on the contract, this function market buys RAM with buyAmount
@@ -106,12 +107,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         (uint256 reserveYGY, uint256 reserveRAM) = getYGYRAMPairReserves();
         uint256 outRAM = UniswapV2Library.getAmountOut(buyAmount, reserveYGY, reserveRAM);
 
+        require(IERC20(_YGYToken).transfer(_YGYRAMPair, buyAmount), "Transfer failed");
+
         (address token0, address token1) = UniswapV2Library.sortTokens(_YGYToken, _RAMToken);
         IUniswapV2Pair(_YGYRAMPair).swap(_RAMToken == token0 ? outRAM : 0, _RAMToken == token1 ? outRAM : 0, address(this), "");
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        sync();
+        // sync();
     }
 
    // _addLiquidity sends RAM, YGY tokens to the _YGYRAMPair contract and mints _YGYRAMPair LP tokens.
