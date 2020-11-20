@@ -525,10 +525,20 @@ contract RAMVault is OwnableUpgradeSafe {
         boostFees = 0;
 
         // Distribute taxes to regenerator and team 50/50%
-        uint256 individualDistAmt = totalBoostDistAmt.div(2);
-        if (individualDistAmt > 0) {
-            require(ram.transfer(regeneratoraddr, individualDistAmt), "Transfer failed.");
-            require(ram.transfer(teamaddr, individualDistAmt), "Transfer failed.");
+        uint256 halfDistAmt = totalBoostDistAmt.div(2);
+        if (halfDistAmt > 0) {
+                // 50% to regenerator
+                require(ram.transfer(regeneratoraddr, halfDistAmt), "Transfer failed.");
+                // 70% of the other 50% to devs
+                uint256 devDistAmt = halfDistAmt.mul(70).div(100);
+                if (devDistAmt > 0) {
+                    require(ram.transfer(devaddr, devDistAmt), "Transfer failed.");
+                }
+                // 30% of the other 50% to team
+                uint256 teamDistAmt = halfDistAmt.mul(30).div(100);
+                if (teamDistAmt > 0) {
+                    require(ram.transfer(teamaddr, teamDistAmt), "Transfer failed.");
+                }
         }
     }
 
@@ -605,19 +615,21 @@ contract RAMVault is OwnableUpgradeSafe {
     function transferDevFee() public {
         if(pending_DEV_rewards == 0) return;
 
+        uint256 devDistAmt;
+        uint256 teamDistAmt;
         uint256 ramBal = ram.balanceOf(address(this));
         if (pending_DEV_rewards > ramBal) {
-
-            ram.transfer(devaddr, ramBal);
-            ramBalance = ram.balanceOf(address(this));
-
+            devDistAmt = ramBal.mul(70).div(100);
+            teamDistAmt = ramBal.mul(30).div(100);
         } else {
-
-            ram.transfer(devaddr, pending_DEV_rewards);
-            ramBalance = ram.balanceOf(address(this));
-
+            devDistAmt = pending_DEV_rewards.mul(70).div(100);
+            teamDistAmt = pending_DEV_rewards.mul(30).div(100);
         }
 
+        if (devDistAmt > 0) { ram.transfer(devaddr, devDistAmt); }
+        if (teamDistAmt > 0) { ram.transfer(teamaddr, teamDistAmt);}
+
+        ramBalance = ram.balanceOf(address(this));
         pending_DEV_rewards = 0;
     }
 
