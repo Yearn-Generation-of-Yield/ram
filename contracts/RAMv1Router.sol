@@ -6,6 +6,8 @@ import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
 import './uniswapv2/libraries/Math.sol';
 import "./uniswapv2/libraries/UniswapV2Library.sol";
+import "./NFT.sol";
+import "./NFTFactory.sol";
 import "./IFeeApprover.sol";
 import "./IRAMVault.sol";
 
@@ -25,11 +27,17 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     address public _uniV2Factory;
 
     // Governance and regenerator tax
+    bool governanceSet;
     address public governance;
     address payable public regenerator;
     uint256 public regeneratorTax;
 
-    // RNG variables
+    // NFT
+    bool public nftFactorySet;
+    NFTFactory public nftFactory;
+    NFT public nft;
+
+    // RNG
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
     uint public constant SCALE = 10;
     uint public constant SCALIFIER = MAX / SCALE;
@@ -37,9 +45,18 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public randomResult;
     bytes32 internal keyHash;
     uint256 internal fee;
-    bool governanceSet;
 
-    constructor(address RAMToken, address YGYToken, address WETH, address uniV2Factory, address YGYRAMPair, address YGYWethPair, address feeApprover, address RAMVault, address payable _regenerator)
+    constructor(
+        address RAMToken,
+        address YGYToken,
+        address WETH,
+        address uniV2Factory,
+        address YGYRAMPair,
+        address YGYWethPair,
+        address feeApprover,
+        address RAMVault,
+        address payable _regenerator
+    )
         VRFConsumerBase(
             0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator (KOVAN)
             0xa36085F69e2889c224210F603D836748e7dC0088  // LINK Token (KOVAN)
@@ -58,7 +75,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         refreshApproval();
 
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
-        fee = 0.1 * 10 ** 18; // 0.1 LINK
+        fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
+    }
+
+    function setNFTFactory(address _governance) public {
+        require(!nftFactorySet, "NFT factory contract has already been set");
+        nftFactorySet = true;
+        nftFactory = new NFTFactory();
+        nft = nftFactory.deployNFT("RAMYGYLP NFT", "RAMYGYLPNFT", "RAMYGYLP.nft");
+
     }
 
     function setGovernance(address _governance) public {
@@ -129,6 +154,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     // With buyAmount*2 amount of YGY tokens on the contract, this function market buys RAM with buyAmount
     // of YGY and then calls _addLiquidity
     function _swapYGYForRAMAndAddLiquidity(uint256 buyAmount, address payable to, bool autoStake) internal {
+        require(address(nftFactory) != address(0));
+
         (uint256 reserveYGY, uint256 reserveRAM) = getYGYRAMPairReserves();
         uint256 outRAM = UniswapV2Library.getAmountOut(buyAmount, reserveYGY, reserveRAM);
 
@@ -139,7 +166,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        // sync();
+        sync();
     }
 
    // _addLiquidity sends RAM, YGY tokens to the _YGYRAMPair contract and mints _YGYRAMPair LP tokens.
@@ -173,6 +200,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         if (YGYAmount > optimalYGYAmount)
             IERC20(_YGYToken).transfer(to, YGYAmount.sub(optimalYGYAmount));
+
+        nftFactory.mint(nft, to);
     }
 
     function getLPTokenPerYGYUnit(uint ygyAmt) public view  returns (uint liquidity){

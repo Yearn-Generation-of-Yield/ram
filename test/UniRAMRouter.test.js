@@ -1,5 +1,6 @@
 const UniRAMRouter = artifacts.require("RAMv1Router");
 const UniV2Factory = artifacts.require("UniswapV2Factory");
+const NFTFactory = artifacts.require("NFTFactory");
 const WETH = artifacts.require("WETH9");
 const RAM = artifacts.require("RAM");
 const RAMVAULT = artifacts.require("RAMVault");
@@ -64,8 +65,13 @@ contract("UniRAMRouter", accounts => {
         await this.RAMToken.transfer(this.YGYRAMPair.address, (5*1e18).toString(), { from: setterAccount });
         await this.YGYRAMPair.mint(setterAccount);
 
+        // Deploy NFT Factory contract
+        // this.nftfactory = await NFTFactory.new({ from: setterAccount });
+        // await this.nftfactory.deployNFT("RAMYGYLP NFT", "RAMYGYLPNFT", "RAMYGYLP.nft", { from: setterAccount });
+        // const nftAddress = await this.nftfactory.lastContractAddress.call();
+
         // Deploy RAMRouter contract
-        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, rengeneratorAddr,  { from: setterAccount });
+        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, rengeneratorAddr, { from: setterAccount });
 
         // Deploy governance contract and set on router
         this.governance = await Governance.new(this.YGYToken.address, this.RAMRouter.address);
