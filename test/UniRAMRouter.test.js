@@ -5,6 +5,7 @@ const RAM = artifacts.require("RAM");
 const RAMVAULT = artifacts.require("RAMVault");
 const Token = artifacts.require("Token");
 const UniV2Pair = artifacts.require("UniswapV2Pair");
+const Governance = artifacts.require("Governance");
 const FeeApprover = artifacts.require('FeeApprover');
 
 const truffleAssert = require("truffle-assertions");
@@ -64,7 +65,11 @@ contract("UniRAMRouter", accounts => {
         await this.YGYRAMPair.mint(setterAccount);
 
         // Deploy RAMRouter contract
-        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address);
+        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, rengeneratorAddr,  { from: setterAccount });
+
+        // Deploy governance contract and set on router
+        this.governance = await Governance.new(this.YGYToken.address, this.RAMRouter.address);
+        this.RAMRouter.setGovernance(this.governance.address, { from: setterAccount });
 
         // Initialize RAMVault
         await this.RAMvault.initialize(this.RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount, { from: setterAccount });

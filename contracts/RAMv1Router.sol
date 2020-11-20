@@ -24,6 +24,11 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     IWETH public _WETH;
     address public _uniV2Factory;
 
+    // Governance and regenerator tax
+    address public governance;
+    address payable public regenerator;
+    uint256 public regeneratorTax;
+
     // RNG variables
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
     uint public constant SCALE = 10;
@@ -32,8 +37,9 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public randomResult;
     bytes32 internal keyHash;
     uint256 internal fee;
+    bool governanceSet;
 
-    constructor(address RAMToken, address YGYToken, address WETH, address uniV2Factory, address YGYRAMPair, address YGYWethPair, address feeApprover, address RAMVault)
+    constructor(address RAMToken, address YGYToken, address WETH, address uniV2Factory, address YGYRAMPair, address YGYWethPair, address feeApprover, address RAMVault, address payable _regenerator)
         VRFConsumerBase(
             0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator (KOVAN)
             0xa36085F69e2889c224210F603D836748e7dC0088  // LINK Token (KOVAN)
@@ -48,12 +54,23 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         _YGYRAMPair = YGYRAMPair;
         _YGYWETHPair = YGYWethPair;
         _RAMVault = IRAMVault(RAMVault);
+        regenerator = _regenerator;
         refreshApproval();
 
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
         fee = 0.1 * 10 ** 18; // 0.1 LINK
     }
 
+    function setGovernance(address _governance) public {
+        require(!governanceSet, "Governance contract has already been set");
+        governanceSet = true;
+        governance = _governance;
+    }
+
+    function setRegeneratorTax(uint256 _regeneratorTax) public {
+        require(msg.sender != governance, "Locked to governance");
+        regeneratorTax = _regeneratorTax;
+    }
 
     function refreshApproval() public {
         IUniswapV2Pair(_YGYRAMPair).approve(address(_RAMVault), uint(-1));
@@ -84,21 +101,29 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         (address token0, address token1) = UniswapV2Library.sortTokens(address(_WETH), _YGYToken);
         IUniswapV2Pair(_YGYWETHPair).swap(_YGYToken == token0 ? outYGY : 0, _YGYToken == token1 ? outYGY : 0, address(this), "");
 
-        hardRAMInYGY[to] = hardRAMInYGY[to].add(outYGY);
+        // Calculate tax and send directly to regenerator
+        uint256 taxedAmount = outYGY.mul(regeneratorTax).div(100);
+        regenerator.transfer(taxedAmount);
 
-        _swapYGYForRAMAndAddLiquidity(outYGY.div(2), to, autoStake);
+        uint256 outAmount = outYGY.sub(taxedAmount);
+        hardRAMInYGY[to] = hardRAMInYGY[to].add(outAmount);
+
+        _swapYGYForRAMAndAddLiquidity(outAmount.div(2), to, autoStake);
     }
 
     // addLiquidityYGYOnly transfers approved YGY tokens to the contract and calls _swapYGYForRAMAndAddLiquidity
     function addLiquidityYGYOnly(uint256 amount, bool autoStake) public payable {
-        // require(to != address(0), "Invalid address");
-        require(amount.div(2) > 0, "Insufficient token amount");
+        require(amount > 0, "Insufficient token amount");
         require(IERC20(_YGYToken).transferFrom(msg.sender, address(this), amount), "Approve tokens first");
 
-        hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(amount);
+        // Calculate tax and send directly to regenerator
+        uint256 taxedAmount = amount.mul(regeneratorTax).div(100);
+        regenerator.transfer(taxedAmount);
 
-        // _swapYGYForRAMAndAddLiquidity(amount, msg.sender, autoStake);
-        _swapYGYForRAMAndAddLiquidity(amount.div(2), msg.sender, autoStake);
+        uint256 outAmount = amount.sub(taxedAmount);
+        hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(outAmount);
+
+        _swapYGYForRAMAndAddLiquidity(outAmount.div(2), msg.sender, autoStake);
     }
 
     // With buyAmount*2 amount of YGY tokens on the contract, this function market buys RAM with buyAmount
