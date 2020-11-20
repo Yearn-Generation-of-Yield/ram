@@ -282,7 +282,7 @@ contract RAMVault is OwnableUpgradeSafe {
         //Transfer in the amounts from user
         // save gas
         if(_amount > 0) {
-            pool.token.safeTransferFrom(address(msg.sender), address(this), _amount);
+            pool.token.transferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
@@ -324,7 +324,7 @@ contract RAMVault is OwnableUpgradeSafe {
         updateAndPayOutPending(_pid, depositFor); // Update the balances of person that amount is being deposited for
 
         if(_amount > 0) {
-            pool.token.safeTransferFrom(address(msg.sender), address(this), _amount);
+            pool.token.transferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount); // This is depositedFor address
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.

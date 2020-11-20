@@ -71,15 +71,17 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         return _name;
     }
 
-    function initialSetup(address router, address factory) internal {
-        _name = "cVault.finance";
+    function initialSetup(address router, address factory, address _YGY) internal {
+        _name = "RAM Token";
         _symbol = "RAM";
         _decimals = 18;
-        _mint(address(this), initialSupply);
+        _mint(msg.sender, initialSupply); // TEST MOCK
+        // _mint(address(this), initialSupply); // TODO: production
+
         contractStartTimestamp = block.timestamp;
         uniswapRouterV2 = IUniswapV2Router02(router != address(0) ? router : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // For testing
         uniswapFactory = IUniswapV2Factory(factory != address(0) ? factory : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f); // For testing
-        createUniswapPairMainnet();
+        // createUniswapPairMainnet(_YGY); // TODO: uncomment for production
     }
 
     /**
@@ -131,121 +133,14 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
     address public tokenUniswapPair;
 
-    function createUniswapPairMainnet() public returns (address) {
+    function createUniswapPairMainnet(address _YGY) public returns (address) {
         require(tokenUniswapPair == address(0), "Token: pool already created");
         tokenUniswapPair = uniswapFactory.createPair(
-            address(uniswapRouterV2.WETH()),
+            _YGY,
             address(this)
         );
         return tokenUniswapPair;
     }
-
-
-    //// Liquidity generation logic
-    /// Steps - All tokens tat will ever exist go to this contract
-    /// This contract accepts ETH as payable
-    /// ETH is mapped to people
-    /// When liquidity generationevent is over veryone can call
-    /// the mint LP function
-    // which will put all the ETH and tokens inside the uniswap contract
-    /// without any involvement
-    /// This LP will go into this contract
-    /// And will be able to proportionally be withdrawn baed on ETH put in
-    /// A emergency drain function allows the contract owner to drain all ETH and tokens from this contract
-    /// After the liquidity generation event happened. In case something goes wrong, to send ETH back
-
-
-    string public liquidityGenerationParticipationAgreement = "I'm not a resident of the United States \n I understand that this contract is provided with no warranty of any kind. \n I agree to not hold the contract creators, RAM team members or anyone associated with this event liable for any damage monetary and otherwise I might onccur. \n I understand that any smart contract interaction carries an inherent risk.";
-
-    function getSecondsLeftInLiquidityGenerationEvent() public view returns (uint256) {
-        require(liquidityGenerationOngoing(), "Event over");
-        console.log("7 days since start is", contractStartTimestamp.add(7 days), "Time now is", block.timestamp);
-        return contractStartTimestamp.add(7 days).sub(block.timestamp);
-    }
-
-    function liquidityGenerationOngoing() public view returns (bool) {
-        console.log("7 days since start is", contractStartTimestamp.add(7 days), "Time now is", block.timestamp);
-        console.log("liquidity generation ongoing", contractStartTimestamp.add(7 days) < block.timestamp);
-        return contractStartTimestamp.add(7 days) > block.timestamp;
-    }
-
-    // Emergency drain in case of a bug
-    // Adds all funds to owner to refund people
-    // Designed to be as simple as possible
-    function emergencyDrain24hAfterLiquidityGenerationEventIsDone() public onlyOwner {
-        require(contractStartTimestamp.add(8 days) < block.timestamp, "Liquidity generation grace period still ongoing"); // About 24h after liquidity generation happens
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        require(success, "Transfer failed.");
-        _balances[msg.sender] = _balances[address(this)];
-        _balances[address(this)] = 0;
-    }
-
-    uint256 public totalLPTokensMinted;
-    uint256 public totalETHContributed;
-    uint256 public LPperETHUnit;
-
-
-    bool public LPGenerationCompleted;
-    // Sends all avaibile balances and mints LP tokens
-    // Possible ways this could break addressed
-    // 1) Multiple calls and resetting amounts - addressed with boolean
-    // 2) Failed WETH wrapping/unwrapping addressed with checks
-    // 3) Failure to create LP tokens, addressed with checks
-    // 4) Unacceptable division errors . Addressed with multiplications by 1e18
-    // 5) Pair not set - impossible since its set in constructor
-    function addLiquidityToUniswapRAMxWETHPair() public {
-        require(liquidityGenerationOngoing() == false, "Liquidity generation onging");
-        require(LPGenerationCompleted == false, "Liquidity generation already finished");
-        totalETHContributed = address(this).balance;
-        IUniswapV2Pair pair = IUniswapV2Pair(tokenUniswapPair);
-        console.log("Balance of this", totalETHContributed / 1e18);
-        //Wrap eth
-        address WETH = uniswapRouterV2.WETH();
-        IWETH(WETH).deposit{value : totalETHContributed}();
-        require(address(this).balance == 0 , "Transfer Failed");
-        IWETH(WETH).transfer(address(pair),totalETHContributed);
-        _balances[address(pair)] = _balances[address(this)];
-        _balances[address(this)] = 0;
-        pair.mint(address(this));
-        totalLPTokensMinted = pair.balanceOf(address(this));
-        console.log("Total tokens minted",totalLPTokensMinted);
-        require(totalLPTokensMinted != 0 , "LP creation failed");
-        LPperETHUnit = totalLPTokensMinted.mul(1e18).div(totalETHContributed); // 1e18x for  change
-        console.log("Total per LP token", LPperETHUnit);
-        require(LPperETHUnit != 0 , "LP creation failed");
-        LPGenerationCompleted = true;
-
-    }
-
-
-    mapping (address => uint)  public ethContributed;
-    // Possible ways this could break addressed
-    // 1) No ageement to terms - added require
-    // 2) Adding liquidity after generaion is over - added require
-    // 3) Overflow from uint - impossible there isnt that much ETH aviable
-    // 4) Depositing 0 - not an issue it will just add 0 to tally
-    function addLiquidity(bool agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement) public payable {
-        require(liquidityGenerationOngoing(), "Liquidity Generation Event over");
-        require(agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement, "No agreement provided");
-        ethContributed[msg.sender] += msg.value; // Overflow protection from safemath is not neded here
-        totalETHContributed = totalETHContributed.add(msg.value); // for front end display during LGE. This resets with definietly correct balance while calling pair.
-        emit LiquidityAddition(msg.sender, msg.value);
-    }
-
-    // Possible ways this could break addressed
-    // 1) Accessing before event is over and resetting eth contributed -- added require
-    // 2) No uniswap pair - impossible at this moment because of the LPGenerationCompleted bool
-    // 3) LP per unit is 0 - impossible checked at generation function
-    function claimLPTokens() public {
-        require(LPGenerationCompleted, "Event not over yet");
-        require(ethContributed[msg.sender] > 0 , "Nothing to claim, move along");
-        IUniswapV2Pair pair = IUniswapV2Pair(tokenUniswapPair);
-        uint256 amountLPToTransfer = ethContributed[msg.sender].mul(LPperETHUnit).div(1e18);
-        pair.transfer(msg.sender, amountLPToTransfer); // stored as 1e18x value for change
-        ethContributed[msg.sender] = 0;
-        emit LPTokenClaimed(msg.sender, amountLPToTransfer);
-    }
-
 
     /**
      * @dev See {IERC20-transfer}.

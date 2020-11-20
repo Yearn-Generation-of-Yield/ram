@@ -13,32 +13,32 @@ contract FeeApprover is OwnableUpgradeSafe {
 
     function initialize(
         address _RAMAddress,
-        address _WETHAddress,
+        address _YGYAddress,
         address _uniswapFactory
     ) public initializer {
         OwnableUpgradeSafe.__Ownable_init();
         ramTokenAddress = _RAMAddress;
-        WETHAddress = _WETHAddress;
-        tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(WETHAddress,ramTokenAddress);
+        ygyTokenAddress = _YGYAddress;
+        tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(ygyTokenAddress,ramTokenAddress);
         feePercentX100 = 10;
         paused = true; // We start paused until sync post LGE happens.
         _editNoFeeList(0xC5cacb708425961594B63eC171f4df27a9c0d8c9, true); // ramvault proxy
         _editNoFeeList(tokenUniswapPair, true);
-        sync();
+        // sync();
         minFinney = 5000;
     }
 
 
     address tokenUniswapPair;
     IUniswapV2Factory public uniswapFactory;
-    address internal WETHAddress;
     address ramTokenAddress;
+    address ygyTokenAddress;
     address ramVaultAddress;
     uint8 public feePercentX100;  // max 255 = 25.5% artificial clamp
     uint256 public lastTotalSupplyOfLPTokens;
     bool paused;
     uint256 private lastSupplyOfRamInPair;
-    uint256 private lastSupplyOfWETHInPair;
+    uint256 private lastSupplyOfYgyInPair;
     mapping (address => bool) public noFeeList;
 
     // RAM token is pausable
@@ -75,17 +75,16 @@ contract FeeApprover is OwnableUpgradeSafe {
         lpTokenBurn = lastTotalSupplyOfLPTokens > _LPSupplyOfPairTotal;
         lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
 
-        uint256 _balanceWETH = IERC20(WETHAddress).balanceOf(tokenUniswapPair);
+        uint256 _balanceYGY = IERC20(ygyTokenAddress).balanceOf(tokenUniswapPair);
         uint256 _balanceRAM = IERC20(ramTokenAddress).balanceOf(tokenUniswapPair);
 
         // Do not block after small liq additions
         // you can only withdraw 350$ now with front running
         // And cant front run buys with liq add ( adversary drain )
-
-        lastIsMint = _balanceRAM > lastSupplyOfRamInPair && _balanceWETH > lastSupplyOfWETHInPair.add(minFinney.mul(1 finney));
+        lastIsMint = _balanceRAM > lastSupplyOfRamInPair && _balanceYGY > lastSupplyOfYgyInPair.add(minFinney.mul(1 finney));
 
         lastSupplyOfRamInPair = _balanceRAM;
-        lastSupplyOfWETHInPair = _balanceWETH;
+        lastSupplyOfYgyInPair = _balanceYGY;
     }
 
 
