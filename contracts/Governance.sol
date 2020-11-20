@@ -36,13 +36,10 @@ contract Governance {
 
     mapping(address => User) public users;
 
-    constructor(address _YGYToken) public {
+    constructor(address _YGYToken, address _RAMRouter) public {
         YGYToken = IERC20(_YGYToken);
-        weightedNumber = 1; // start at 1%
-    }
-
-    function registerRAMRouter(address _RAMRouter) public {
         RAMRouter = IRAMv1Router(_RAMRouter);
+        weightedNumber = 1; // start at 1%
     }
 
     function setUserNumber(uint256 _number) public {
