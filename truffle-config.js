@@ -1,7 +1,7 @@
 require("dotenv").config();
 var HDWalletProvider = require("@truffle/hdwallet-provider");
 
-const kovanProvider = new HDWalletProvider(process.env.MNEMONIC, "https://kovan.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID));
+const kovanProvider = new HDWalletProvider(process.env.PRIVATE_KEY, "https://kovan.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID));
 
 module.exports = {
   networks: {
