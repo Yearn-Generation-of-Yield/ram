@@ -15,9 +15,9 @@ contract RAM is NBUNIERC20 {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor(address router, address factory, address YGY) public {
+    constructor(address factory) public {
 
-        initialSetup(router, factory, YGY);
+        initialSetup(factory);
         // _name = name;
         // _symbol = symbol;
         // _decimals = 18;
