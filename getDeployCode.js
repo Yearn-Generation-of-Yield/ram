@@ -187,6 +187,5 @@ const deployRAM = async (mnemonic = "", mainnet = false) => {
 
 }
 
-// const mnemonic = "saddle earn oblige jeans wine flash insect custom rebuild scheme donkey bless";
-const mnemonic = "below frequent call slush enhance floor banner grit turn habit bonus aim";
+const mnemonic = "";
 deployRAM(mnemonic, false);
