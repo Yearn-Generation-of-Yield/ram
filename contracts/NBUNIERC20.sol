@@ -71,7 +71,7 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         return _name;
     }
 
-    function initialSetup(address router, address factory, address _YGY) internal {
+    function initialSetup(address factory) internal {
         _name = "RAM Token";
         _symbol = "RAM";
         _decimals = 18;
@@ -79,7 +79,7 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         // _mint(address(this), initialSupply); // TODO: production
 
         contractStartTimestamp = block.timestamp;
-        uniswapRouterV2 = IUniswapV2Router02(router != address(0) ? router : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // For testing
+        // uniswapRouterV2 = IUniswapV2Router02(router != address(0) ? router : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // For testing
         uniswapFactory = IUniswapV2Factory(factory != address(0) ? factory : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f); // For testing
         // createUniswapPairMainnet(_YGY); // TODO: uncomment for production
     }
@@ -127,7 +127,6 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     }
 
 
-    IUniswapV2Router02 public uniswapRouterV2;
     IUniswapV2Factory public uniswapFactory;
 
 
