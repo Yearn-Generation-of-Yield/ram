@@ -87,12 +87,6 @@ contract("UniRAMRouter", accounts => {
     });
 
     it("should be able to add liquidity with only YGY", async () => {
-        // const nftFactory = await this.RAMRouter._NFTFactory.call();
-        // assert.isTrue(nftFactory == this.nftFactory.address);
-
-        // const bondedContract = await this.nftFactory.bondedContract.call();
-        // assert.isTrue(bondedContract == this.RAMRouter.address);
-
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
         await this.YGYToken.approve(this.RAMRouter.address, 2e18.toString(), { from: testAccount });

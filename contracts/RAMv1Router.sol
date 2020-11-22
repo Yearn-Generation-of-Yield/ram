@@ -160,9 +160,9 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        // _NFTFactory.mint(_NFT, to);
+        _NFTFactory.mint(_NFT, to);
 
-        sync();
+        // sync();
     }
 
    // _addLiquidity sends RAM, YGY tokens to the _YGYRAMPair contract and mints _YGYRAMPair LP tokens.
