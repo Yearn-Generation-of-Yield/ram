@@ -19,7 +19,7 @@ contract NFTFactory is Ownable {
         public
         returns(NFT newContract)
     {
-      require(msg.sender == owner() || msg.sender == bondedContract, "Invalid caller");
+      require(msg.sender == owner() || msg.sender == bondedContract, "Invalid caller: can't deploy NFT");
 
       // Deploy new NFT
       NFT nft = new NFT(name, symbol, tokenURI);
@@ -34,7 +34,7 @@ contract NFTFactory is Ownable {
     }
 
     function mint(NFT _nft, address recipient) public {
-      require(msg.sender == bondedContract, "Invalid caller");
+      require(msg.sender == bondedContract, "Invalid caller: can't mint NFT");
       _nft.mint(recipient);
     }
 

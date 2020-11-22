@@ -7,7 +7,7 @@ import "./uniswapv2/interfaces/IWETH.sol";
 import './uniswapv2/libraries/Math.sol';
 import "./uniswapv2/libraries/UniswapV2Library.sol";
 import "./NFT.sol";
-import "./NFTFactory.sol";
+import "./INFTFactory.sol";
 import "./IFeeApprover.sol";
 import "./IRAMVault.sol";
 
@@ -33,9 +33,9 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public regeneratorTax;
 
     // NFT
-    bool public nftFactorySet;
-    NFTFactory public nftFactory;
-    NFT public nft;
+    // bool public nftsDeployed;
+    INFTFactory public _NFTFactory;
+    NFT public _NFT;
 
     // RNG
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
@@ -55,6 +55,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         address YGYWethPair,
         address feeApprover,
         address RAMVault,
+        address nftFactory,
+        address nft,
         address payable _regenerator
     )
         VRFConsumerBase(
@@ -71,6 +73,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         _YGYRAMPair = YGYRAMPair;
         _YGYWETHPair = YGYWethPair;
         _RAMVault = IRAMVault(RAMVault);
+        _NFTFactory = INFTFactory(nftFactory);
+        _NFT = NFT(nft);
         regenerator = _regenerator;
         refreshApproval();
 
@@ -78,12 +82,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
     }
 
-    function setNFTFactory(address _governance) public {
-        require(!nftFactorySet, "NFT factory contract has already been set");
-        nftFactorySet = true;
-        nftFactory = new NFTFactory();
-        nft = nftFactory.deployNFT("RAMYGYLP NFT", "RAMYGYLPNFT", "RAMYGYLP.nft");
-
+    function mintNFT(address to) public {
+        _NFTFactory.mint(_NFT, to);
     }
 
     function setGovernance(address _governance) public {
@@ -154,8 +154,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     // With buyAmount*2 amount of YGY tokens on the contract, this function market buys RAM with buyAmount
     // of YGY and then calls _addLiquidity
     function _swapYGYForRAMAndAddLiquidity(uint256 buyAmount, address payable to, bool autoStake) internal {
-        require(address(nftFactory) != address(0));
-
         (uint256 reserveYGY, uint256 reserveRAM) = getYGYRAMPairReserves();
         uint256 outRAM = UniswapV2Library.getAmountOut(buyAmount, reserveYGY, reserveRAM);
 
@@ -165,6 +163,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         IUniswapV2Pair(_YGYRAMPair).swap(_RAMToken == token0 ? outRAM : 0, _RAMToken == token1 ? outRAM : 0, address(this), "");
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
+
+        // _NFTFactory.mint(_NFT, to);
 
         sync();
     }
@@ -200,8 +200,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         if (YGYAmount > optimalYGYAmount)
             IERC20(_YGYToken).transfer(to, YGYAmount.sub(optimalYGYAmount));
-
-        nftFactory.mint(nft, to);
     }
 
     function getLPTokenPerYGYUnit(uint ygyAmt) public view  returns (uint liquidity){

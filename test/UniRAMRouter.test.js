@@ -65,13 +65,18 @@ contract("UniRAMRouter", accounts => {
         await this.RAMToken.transfer(this.YGYRAMPair.address, (5*1e18).toString(), { from: setterAccount });
         await this.YGYRAMPair.mint(setterAccount);
 
-        // Deploy NFT Factory contract
-        // this.nftfactory = await NFTFactory.new({ from: setterAccount });
-        // await this.nftfactory.deployNFT("RAMYGYLP NFT", "RAMYGYLPNFT", "RAMYGYLP.nft", { from: setterAccount });
-        // const nftAddress = await this.nftfactory.lastContractAddress.call();
+
+        // Deploy NFT Factory
+        this.nftFactory = await NFTFactory.new({ from: setterAccount });
+        // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
+        const nftAddr = await this.nftFactory.deployNFT.call("nft name", "nft symbol", "nft token uri", { from: setterAccount });
+        await this.nftFactory.deployNFT("nft name", "nft symbol", "nft token uri", { from: setterAccount });
 
         // Deploy RAMRouter contract
-        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, rengeneratorAddr, { from: setterAccount });
+        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, this.nftFactory.address, nftAddr, rengeneratorAddr, { from: setterAccount });
+
+        // Bond NFT factory and deploy NFTs using RAM router
+        await this.nftFactory.bondContract(this.RAMRouter.address, { from: setterAccount });
 
         // Deploy governance contract and set on router
         this.governance = await Governance.new(this.YGYToken.address, this.RAMRouter.address);
@@ -82,6 +87,14 @@ contract("UniRAMRouter", accounts => {
     });
 
     it("should be able to add liquidity with only YGY", async () => {
+        // const nftFactory = await this.RAMRouter._NFTFactory.call();
+        // assert.isTrue(nftFactory == this.nftFactory.address);
+
+        // const bondedContract = await this.nftFactory.bondedContract.call();
+        // assert.isTrue(bondedContract == this.RAMRouter.address);
+
+        // await this.RAMRouter.mintNFT(setterAccount);
+
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
         await this.YGYToken.approve(this.RAMRouter.address, 2e18.toString(), { from: testAccount });
