@@ -7,20 +7,21 @@ const Token = artifacts.require("Token");
 const UniV2Pair = artifacts.require("UniswapV2Pair");
 const Governance = artifacts.require("Governance");
 const FeeApprover = artifacts.require('FeeApprover');
+const NFTFactory = artifacts.require('NFTFactory');
 
 module.exports = function(deployer, network, accounts) {
 
    // [KOVAN TESTNET DEPLOYMENT]
-  let setterAccount = deployer.networks.kovan.from;
-  let devAccount = "0xB5aC192829C65Fd553bFb0381E1139867A4626FD";
-  let teamAddr = "0x08F57A4acCfEB2970E0A56270160719A1aa5b4A4";
-  let rengeneratorAddr = "0x26C9264CB693AB4142ad19d2AB44B272dd1C9691";
+  // let setterAccount = deployer.networks.kovan.from;
+  // let devAccount = "0xB5aC192829C65Fd553bFb0381E1139867A4626FD";
+  // let teamAddr = "0x08F57A4acCfEB2970E0A56270160719A1aa5b4A4";
+  // let rengeneratorAddr = "0x26C9264CB693AB4142ad19d2AB44B272dd1C9691";
 
   // [LOCAL DEPLOYMENT]
-  // let setterAccount = accounts[2];
-  // let devAccount = accounts[2];
-  // let teamAddr = accounts[3];
-  // let rengeneratorAddr = accounts[4];
+  let setterAccount = accounts[2];
+  let devAccount = accounts[2];
+  let teamAddr = accounts[3];
+  let rengeneratorAddr = accounts[4];
 
   const tenThousand = "10000000000000000000000";
   const fiveThousand = "5000000000000000000000";
@@ -68,8 +69,25 @@ module.exports = function(deployer, network, accounts) {
     // Deploy RAMvault to manage yield farms
     const RAMVault = await deployer.deploy(RAMVAULT);
 
+    // Deploy NFT Factory
+    const nftFactory = await deployer.deploy(NFTFactory);
+
+    // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
+    const nftAddr1 = await nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    await nftFactory.deployNFT("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    const nftAddr2 = await nftFactory.deployNFT.call("RAM level 2", "RAMLEVEL2NFT", "ram.level2");
+    await nftFactory.deployNFT("RAM level 2", "RAMLEVEL2NFT", "ram.level2");
+    const nftAddr3 = await nftFactory.deployNFT.call("RAM level 3", "RAMLEVEL3NFT", "ram.level3");
+    await nftFactory.deployNFT("RAM level 3", "RAMLEVEL3NFT", "ram.level3");
+    const nftAddr4 = await nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    await nftFactory.deployNFT("RAM level 4", "RAMLEVEL4NFT", "ram.level4");
+    const nftAddr5 = await nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
+    await nftFactory.deployNFT("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
+
+    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5];
+
     // Deploy RAMRouter contract
-    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, rengeneratorAddr);
+    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr);
 
     // Deploy governance contract and set on router
     const governance = await deployer.deploy(Governance, YGYToken.address, RAMRouter.address);

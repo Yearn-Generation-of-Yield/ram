@@ -1,5 +1,7 @@
 const UniRAMRouter = artifacts.require("RAMv1Router");
 const UniV2Factory = artifacts.require("UniswapV2Factory");
+const NFTFactory = artifacts.require("NFTFactory");
+const NFT = artifacts.require("NFT");
 const WETH = artifacts.require("WETH9");
 const RAM = artifacts.require("RAM");
 const RAMVAULT = artifacts.require("RAMVault");
@@ -34,7 +36,7 @@ contract("UniRAMRouter", accounts => {
 
         // Deploy a new RAM token which manages Governance for the protocol
         this.YGYToken = await Token.new("YGY", "YGY", (20*1e18).toString(), { from: setterAccount });
-        this.RAMToken = await RAM.new(this.uniV2Factory.address, this.uniV2Factory.address, this.YGYToken.address, { from: setterAccount });
+        this.RAMToken = await RAM.new(this.uniV2Factory.address, { from: setterAccount });
 
         // Deploy a new FeeApprover contract
         this.feeapprover = await FeeApprover.new({ from: setterAccount }) ;
@@ -64,14 +66,34 @@ contract("UniRAMRouter", accounts => {
         await this.RAMToken.transfer(this.YGYRAMPair.address, (5*1e18).toString(), { from: setterAccount });
         await this.YGYRAMPair.mint(setterAccount);
 
-        // Deploy RAMRouter contract
-        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, rengeneratorAddr,  { from: setterAccount });
 
-        // Deploy governance contract and set on router
+        // Deploy NFT Factory
+        this.nftFactory = await NFTFactory.new({ from: setterAccount });
+        // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
+        const nftAddr1 = await this.nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM level 1", "RAMLEVEL1NFT", "ram.level1", { from: setterAccount });
+        const nftAddr2 = await this.nftFactory.deployNFT.call("RAM level 2", "RAMLEVEL2NFT", "ram.level2", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM level 2", "RAMLEVEL1NFT", "ram.level2", { from: setterAccount });
+        const nftAddr3 = await this.nftFactory.deployNFT.call("RAM level 3", "RAMLEVEL3NFT", "ram.level3", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM level 3", "RAMLEVEL1NFT", "ram.level3", { from: setterAccount });
+        const nftAddr4 = await this.nftFactory.deployNFT.call("RAM level 4", "RAMLEVEL4NFT", "ram.level4", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM level 4", "RAMLEVEL1NFT", "ram.level4", { from: setterAccount });
+        const nftAddr5 = await this.nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM level 5", "RAMLEVEL1NFT", "ram.level5", { from: setterAccount });
+
+        this.nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5];
+
+        // // Deploy RAMRouter contract
+        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, this.nftFactory.address, this.nftAddrs, rengeneratorAddr, { from: setterAccount });
+
+        // // Bond NFT factory and deploy NFTs using RAM router
+        await this.nftFactory.bondContract(this.RAMRouter.address, { from: setterAccount });
+
+        // // Deploy governance contract and set on router
         this.governance = await Governance.new(this.YGYToken.address, this.RAMRouter.address);
         this.RAMRouter.setGovernance(this.governance.address, { from: setterAccount });
 
-        // Initialize RAMVault
+        // // Initialize RAMVault
         await this.RAMvault.initialize(this.RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount, { from: setterAccount });
     });
 
@@ -144,4 +166,42 @@ contract("UniRAMRouter", accounts => {
             await this.RAMvault.withdraw(0, (5*1e17).toString(), { from: testAccount2 })
         );
      });
+
+    // With lottery ticket {levelOneChance: 100, levelTwoChance: 50, levelThreeChance: 0, levelFourChance: 0, levelFiveChance: 0 }
+    //  and with a random result of 51, this test should return true
+     it("should win NFTs based on the random number", async () => {
+        await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
+
+        await this.YGYToken.approve(this.RAMRouter.address, 2e18.toString(), { from: testAccount });
+        truffleAssert.passes(
+            await this.RAMRouter.addLiquidityYGYOnly(2e18.toString(), false, { from: testAccount })
+        );
+
+        // const ethValueOfContributions = Number(await this.RAMRouter.liquidityContributedEthValue.call(testAccount));
+        // console.log("ethValueOfContributions:", ethValueOfContributions);
+        // const userLotteryLevel = Number(await this.RAMRouter.getUserLotteryLevel.call(testAccount));
+        // console.log("userLotteryLevel:", userLotteryLevel);
+
+        const NFTOne = await NFT.at(this.nftAddrs[0]);
+        const NFTTwo = await NFT.at(this.nftAddrs[1]);
+
+        const levelOneNFTBalanceBefore = Number(await NFTOne.balanceOf.call(testAccount));
+        const levelTwoNFTBalanceBefore = Number(await NFTTwo.balanceOf.call(testAccount));
+
+        console.log("levelOneNFTBalanceBefore:", levelOneNFTBalanceBefore)
+        console.log("levelTwoNFTBalanceBefore:", levelTwoNFTBalanceBefore)
+
+        truffleAssert.passes(
+            await this.RAMRouter.applyRandomNumberToLottery({ from: testAccount })
+        );
+
+        const levelOneNFTBalanceAfter = Number(await NFTOne.balanceOf.call(testAccount));
+        const levelTwoNFTBalanceAfter = Number(await NFTTwo.balanceOf.call(testAccount));
+
+        console.log("levelOneNFTBalanceAfter:", levelOneNFTBalanceAfter)
+        console.log("levelTwoNFTBalanceAfter:", levelTwoNFTBalanceAfter)
+
+        assert.isTrue(levelOneNFTBalanceAfter == (levelOneNFTBalanceBefore+1));
+        assert.isTrue(levelTwoNFTBalanceAfter == (levelTwoNFTBalanceBefore));
+    });
 });
