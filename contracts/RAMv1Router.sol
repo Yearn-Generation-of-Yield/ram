@@ -296,8 +296,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     }
 
     function applyRandomNumberToLottery() public {
-        randomResult = 51;
-        // require(randomReady, "There is no random number available");
+        require(randomReady, "There is no random number available");
 
         for(uint256 i = 1; i <= ticketCount; i++) {
             LotteryTicket memory ticket = tickets[ticketCount];
