@@ -1,6 +1,7 @@
 pragma solidity >=0.6.0;
 
 import "./NFT.sol";
+import "./INFT.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NFTFactory is Ownable {
@@ -33,7 +34,7 @@ contract NFTFactory is Ownable {
       return nft;
     }
 
-    function mint(NFT _nft, address recipient) public {
+    function mint(INFT _nft, address recipient) public {
       require(msg.sender == bondedContract, "Invalid caller: can't mint NFT");
       _nft.mint(recipient);
     }
