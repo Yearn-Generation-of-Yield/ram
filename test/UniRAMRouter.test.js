@@ -169,39 +169,39 @@ contract("UniRAMRouter", accounts => {
 
     // With lottery ticket {levelOneChance: 100, levelTwoChance: 50, levelThreeChance: 0, levelFourChance: 0, levelFiveChance: 0 }
     //  and with a random result of 51, this test should return true
-     it("should win NFTs based on the random number", async () => {
-        await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
+    //  it("should win NFTs based on the random number", async () => {
+    //     await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
-        await this.YGYToken.approve(this.RAMRouter.address, 2e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.RAMRouter.addLiquidityYGYOnly(2e18.toString(), false, { from: testAccount })
-        );
+    //     await this.YGYToken.approve(this.RAMRouter.address, 2e18.toString(), { from: testAccount });
+    //     truffleAssert.passes(
+    //         await this.RAMRouter.addLiquidityYGYOnly(2e18.toString(), false, { from: testAccount })
+    //     );
 
-        // const ethValueOfContributions = Number(await this.RAMRouter.liquidityContributedEthValue.call(testAccount));
-        // console.log("ethValueOfContributions:", ethValueOfContributions);
-        // const userLotteryLevel = Number(await this.RAMRouter.getUserLotteryLevel.call(testAccount));
-        // console.log("userLotteryLevel:", userLotteryLevel);
+    //     const ethValueOfContributions = Number(await this.RAMRouter.liquidityContributedEthValue.call(testAccount));
+    //     console.log("ethValueOfContributions:", ethValueOfContributions);
+    //     const userLotteryLevel = Number(await this.RAMRouter.getUserLotteryLevel.call(testAccount));
+    //     console.log("userLotteryLevel:", userLotteryLevel);
 
-        const NFTOne = await NFT.at(this.nftAddrs[0]);
-        const NFTTwo = await NFT.at(this.nftAddrs[1]);
+    //     const NFTOne = await NFT.at(this.nftAddrs[0]);
+    //     const NFTTwo = await NFT.at(this.nftAddrs[1]);
 
-        const levelOneNFTBalanceBefore = Number(await NFTOne.balanceOf.call(testAccount));
-        const levelTwoNFTBalanceBefore = Number(await NFTTwo.balanceOf.call(testAccount));
+    //     const levelOneNFTBalanceBefore = Number(await NFTOne.balanceOf.call(testAccount));
+    //     const levelTwoNFTBalanceBefore = Number(await NFTTwo.balanceOf.call(testAccount));
 
-        console.log("levelOneNFTBalanceBefore:", levelOneNFTBalanceBefore)
-        console.log("levelTwoNFTBalanceBefore:", levelTwoNFTBalanceBefore)
+    //     console.log("levelOneNFTBalanceBefore:", levelOneNFTBalanceBefore)
+    //     console.log("levelTwoNFTBalanceBefore:", levelTwoNFTBalanceBefore)
 
-        truffleAssert.passes(
-            await this.RAMRouter.applyRandomNumberToLottery({ from: testAccount })
-        );
+    //     truffleAssert.passes(
+    //         await this.RAMRouter.applyRandomNumberToLottery({ from: testAccount })
+    //     );
 
-        const levelOneNFTBalanceAfter = Number(await NFTOne.balanceOf.call(testAccount));
-        const levelTwoNFTBalanceAfter = Number(await NFTTwo.balanceOf.call(testAccount));
+    //     const levelOneNFTBalanceAfter = Number(await NFTOne.balanceOf.call(testAccount));
+    //     const levelTwoNFTBalanceAfter = Number(await NFTTwo.balanceOf.call(testAccount));
 
-        console.log("levelOneNFTBalanceAfter:", levelOneNFTBalanceAfter)
-        console.log("levelTwoNFTBalanceAfter:", levelTwoNFTBalanceAfter)
+    //     console.log("levelOneNFTBalanceAfter:", levelOneNFTBalanceAfter)
+    //     console.log("levelTwoNFTBalanceAfter:", levelTwoNFTBalanceAfter)
 
-        assert.isTrue(levelOneNFTBalanceAfter == (levelOneNFTBalanceBefore+1));
-        assert.isTrue(levelTwoNFTBalanceAfter == (levelTwoNFTBalanceBefore));
-    });
+    //     assert.isTrue(levelOneNFTBalanceAfter == (levelOneNFTBalanceBefore+1));
+    //     assert.isTrue(levelTwoNFTBalanceAfter == (levelTwoNFTBalanceBefore));
+    // });
 });

@@ -347,7 +347,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             if(i == 0) {
                 ticket = LotteryTicket({
                     owner: user,
-                    levelOneChance: 100,
+                    levelOneChance: 50,
                     levelTwoChance: 0,
                     levelThreeChance: 0,
                     levelFourChance: 0,
@@ -356,7 +356,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 1) {
                 ticket = LotteryTicket({
                     owner: user,
-                    levelOneChance: 100,
+                    levelOneChance: 75,
                     levelTwoChance: 50,
                     levelThreeChance: 0,
                     levelFourChance: 0,
@@ -366,7 +366,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                 ticket = LotteryTicket({
                     owner: user,
                     levelOneChance: 100,
-                    levelTwoChance: 100,
+                    levelTwoChance: 75,
                     levelThreeChance: 50,
                     levelFourChance: 0,
                     levelFiveChance: 0
@@ -376,7 +376,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     owner: user,
                     levelOneChance: 100,
                     levelTwoChance: 100,
-                    levelThreeChance: 100,
+                    levelThreeChance: 75,
                     levelFourChance: 50,
                     levelFiveChance: 0
                 });
@@ -386,10 +386,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 100,
-                    levelFourChance: 100,
+                    levelFourChance: 75,
                     levelFiveChance: 50
                 });
-            // Level 6 is an automatic winning ticket at every level
+            // Level 6 is an automatic winning ticket at every level except level 5, which is 50%
             } else if (i == 5) {
                 ticket = LotteryTicket({
                     owner: user,
@@ -397,11 +397,12 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelTwoChance: 100,
                     levelThreeChance: 100,
                     levelFourChance: 100,
-                    levelFiveChance: 100
+                    levelFiveChance: 50
                 });
-            // Level 7 is two automatic winning tickets at every level
+            // Level 7 is a winning ticket for each level + another winning ticket for levels 1-4
             } else if (i == 6) {
-                ticket = LotteryTicket({
+                // Winning ticket (levels 1-5)
+                LotteryTicket memory winningTicket = LotteryTicket({
                     owner: user,
                     levelOneChance: 100,
                     levelTwoChance: 100,
@@ -409,9 +410,18 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 100,
                     levelFiveChance: 100
                 });
-                // Add the extra ticket
                 ticketCount = ticketCount.add(1);
-                tickets[ticketCount] = ticket;
+                tickets[ticketCount] = winningTicket;
+
+                // Winning ticket (levels 1-4)
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 100,
+                    levelFourChance: 100,
+                    levelFiveChance: 0
+                });
             }
 
             // Add the ticket to the lottery
