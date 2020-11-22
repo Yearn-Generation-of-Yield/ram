@@ -82,10 +82,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
     }
 
-    function mintNFT(address to) public {
-        _NFTFactory.mint(_NFT, to);
-    }
-
     function setGovernance(address _governance) public {
         require(!governanceSet, "Governance contract has already been set");
         governanceSet = true;

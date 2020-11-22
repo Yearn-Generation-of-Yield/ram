@@ -35,7 +35,7 @@ contract("UniRAMRouter", accounts => {
 
         // Deploy a new RAM token which manages Governance for the protocol
         this.YGYToken = await Token.new("YGY", "YGY", (20*1e18).toString(), { from: setterAccount });
-        this.RAMToken = await RAM.new(this.uniV2Factory.address, this.uniV2Factory.address, this.YGYToken.address, { from: setterAccount });
+        this.RAMToken = await RAM.new(this.uniV2Factory.address, { from: setterAccount });
 
         // Deploy a new FeeApprover contract
         this.feeapprover = await FeeApprover.new({ from: setterAccount }) ;
@@ -92,8 +92,6 @@ contract("UniRAMRouter", accounts => {
 
         // const bondedContract = await this.nftFactory.bondedContract.call();
         // assert.isTrue(bondedContract == this.RAMRouter.address);
-
-        // await this.RAMRouter.mintNFT(setterAccount);
 
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
