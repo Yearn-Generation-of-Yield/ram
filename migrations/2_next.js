@@ -69,16 +69,25 @@ module.exports = function(deployer, network, accounts) {
     // Deploy RAMvault to manage yield farms
     const RAMVault = await deployer.deploy(RAMVAULT);
 
-
     // Deploy NFT Factory
     const nftFactory = await deployer.deploy(NFTFactory);
 
     // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
-    const nftAddr = await nftFactory.deployNFT.call("nft name", "nft symbol", "nft token uri");
-    await nftFactory.deployNFT("nft name", "nft symbol", "nft token uri");
+    const nftAddr1 = await nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    await nftFactory.deployNFT("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    const nftAddr2 = await nftFactory.deployNFT.call("RAM level 2", "RAMLEVEL2NFT", "ram.level2");
+    await nftFactory.deployNFT("RAM level 2", "RAMLEVEL2NFT", "ram.level2");
+    const nftAddr3 = await nftFactory.deployNFT.call("RAM level 3", "RAMLEVEL3NFT", "ram.level3");
+    await nftFactory.deployNFT("RAM level 3", "RAMLEVEL3NFT", "ram.level3");
+    const nftAddr4 = await nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1");
+    await nftFactory.deployNFT("RAM level 4", "RAMLEVEL4NFT", "ram.level4");
+    const nftAddr5 = await nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
+    await nftFactory.deployNFT("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
+
+    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5];
 
     // Deploy RAMRouter contract
-    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddr, rengeneratorAddr);
+    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr);
 
     // Deploy governance contract and set on router
     const governance = await deployer.deploy(Governance, YGYToken.address, RAMRouter.address);

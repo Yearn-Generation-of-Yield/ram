@@ -6,6 +6,7 @@ import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
 import './uniswapv2/libraries/Math.sol';
 import "./uniswapv2/libraries/UniswapV2Library.sol";
+import "./INFT.sol";
 import "./NFT.sol";
 import "./INFTFactory.sol";
 import "./IFeeApprover.sol";
@@ -14,8 +15,6 @@ import "./IRAMVault.sol";
 // This contract is supposed to streamline liquidity additions
 // By allowing people to put in any amount of ETH or YGY and get LP tokens back
 contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
-    mapping(address => uint256) public hardRAMInYGY;
-
     // RAM protocol variables
     address public _RAMToken;
     address public _YGYRAMPair;
@@ -32,19 +31,33 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     address payable public regenerator;
     uint256 public regeneratorTax;
 
-    // NFT
-    // bool public nftsDeployed;
-    INFTFactory public _NFTFactory;
-    NFT public _NFT;
-
     // RNG
     uint public constant MAX = uint(0) - uint(1); // using underflow to generate the maximum possible value
-    uint public constant SCALE = 10;
+    uint public constant SCALE = 100;
     uint public constant SCALIFIER = MAX / SCALE;
     uint public constant OFFSET = 1;
-    uint256 public randomResult;
     bytes32 internal keyHash;
     uint256 internal fee;
+    bool public randomReady;
+    uint256 public randomResult;
+
+    // Lottery tracking
+    struct LotteryTicket {
+        address owner;
+        uint256 levelOneChance;
+        uint256 levelTwoChance;
+        uint256 levelThreeChance;
+        uint256 levelFourChance;
+        uint256 levelFiveChance;
+    }
+    uint256 public ticketCount;
+    mapping (uint256 => LotteryTicket) public tickets;
+    mapping(address => uint256) public liquidityContributedEthValue;
+    mapping(address => uint256) public lastTicketLevel; // Mapping of (user => last ticket level)
+
+    // NFT
+    INFTFactory public _NFTFactory;
+    mapping(uint256 => address) _NFTs; // Mapping of (level number => NFT address)
 
     constructor(
         address RAMToken,
@@ -56,7 +69,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         address feeApprover,
         address RAMVault,
         address nftFactory,
-        address nft,
+        address[] memory nfts,
         address payable _regenerator
     )
         VRFConsumerBase(
@@ -73,10 +86,13 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         _YGYRAMPair = YGYRAMPair;
         _YGYWETHPair = YGYWethPair;
         _RAMVault = IRAMVault(RAMVault);
-        _NFTFactory = INFTFactory(nftFactory);
-        _NFT = NFT(nft);
         regenerator = _regenerator;
         refreshApproval();
+
+        _NFTFactory = INFTFactory(nftFactory);
+        for(uint i = 0; i < nfts.length; i++) {
+            _NFTs[i+1] = nfts[i];
+        }
 
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
         fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
@@ -127,7 +143,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         regenerator.transfer(taxedAmount);
 
         uint256 outAmount = outYGY.sub(taxedAmount);
-        hardRAMInYGY[to] = hardRAMInYGY[to].add(outAmount);
+        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(outAmount);
 
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), to, autoStake);
     }
@@ -137,12 +153,16 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         require(amount > 0, "Insufficient token amount");
         require(IERC20(_YGYToken).transferFrom(msg.sender, address(this), amount), "Approve tokens first");
 
+        // Calculate value of YGY in ETH for liquidity value tracking
+        (uint256 reserveWeth, uint256 reserveYGY) = getYGYWETHPairReserves();
+        uint256 outETH = UniswapV2Library.getAmountOut(amount, reserveYGY, reserveWeth);
+
         // Calculate tax and send directly to regenerator
         uint256 taxedAmount = amount.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
 
         uint256 outAmount = amount.sub(taxedAmount);
-        hardRAMInYGY[msg.sender] = hardRAMInYGY[msg.sender].add(outAmount);
+        liquidityContributedEthValue[msg.sender] = liquidityContributedEthValue[msg.sender].add(outAmount);
 
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), msg.sender, autoStake);
     }
@@ -160,7 +180,12 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        _NFTFactory.mint(_NFT, to);
+        // If a known random number is ready we reset it by applying it to existing lottery tickets
+        if(randomReady) {
+            applyRandomNumberToLottery();
+        }
+
+        generateLotteryTickets(to);
 
         // sync();
     }
@@ -239,13 +264,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     }
 
     // -------------------------------------------------
-    //                  Chainlink RNG
+    //              NFT Lottery + Chainlink RNG
     // -------------------------------------------------
 
     /**
      * Requests randomness from a user-provided seed
      */
     function getRandomNumber(uint256 userProvidedSeed) public returns (bytes32 requestId) {
+        require(!randomReady, "There is already a random number available");
         require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK on contract");
         return requestRandomness(keyHash, fee, userProvidedSeed);
     }
@@ -254,6 +280,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
      * Requests randomness from a user-provided seed
      */
     function selfRequestRandomNumber(uint256 userProvidedSeed) public returns (bytes32 requestId) {
+        require(!randomReady, "There is already a random number available");
         require(LINK.transferFrom(msg.sender, address(this), fee), "Not enough LINK approved to contract");
         return requestRandomness(keyHash, fee, userProvidedSeed);
     }
@@ -265,5 +292,135 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         uint scaled = randomness / SCALIFIER;
         uint adjusted = scaled + OFFSET;
         randomResult = adjusted;
+        randomReady = true;
+    }
+
+    function applyRandomNumberToLottery() public {
+        randomResult = 51;
+        // require(randomReady, "There is no random number available");
+
+        for(uint256 i = 1; i <= ticketCount; i++) {
+            LotteryTicket memory ticket = tickets[ticketCount];
+            if(randomResult <= ticket.levelOneChance) {
+                _NFTFactory.mint(INFT(_NFTs[1]), ticket.owner);
+            }
+            if(randomResult <= ticket.levelTwoChance) {
+                _NFTFactory.mint(INFT(_NFTs[2]), ticket.owner);
+            }
+            if(randomResult <= ticket.levelThreeChance) {
+                _NFTFactory.mint(INFT(_NFTs[3]), ticket.owner);
+            }
+            if(randomResult <= ticket.levelFourChance) {
+                _NFTFactory.mint(INFT(_NFTs[4]), ticket.owner);
+            }
+            if(randomResult <= ticket.levelFiveChance) {
+                _NFTFactory.mint(INFT(_NFTs[5]), ticket.owner);
+            }
+
+            delete tickets[ticketCount];
+        }
+
+        // Reset lottery
+        randomResult = 0;
+        ticketCount = 0;
+        randomReady = false;
+    }
+
+    function getUserLotteryLevel(address user) public returns (uint256) {
+        uint256 liquidityEthValue = liquidityContributedEthValue[user];
+        if(liquidityEthValue < 1e18) { return 0; }
+        else if(liquidityEthValue >= 1e18 && liquidityEthValue < 5e18) { return 1; }
+        else if(liquidityEthValue >= 5e18 && liquidityEthValue < 10e18) { return 2; }
+        else if(liquidityEthValue >= 10e18 && liquidityEthValue < 20e18) { return 3; }
+        else if(liquidityEthValue >= 20e18 && liquidityEthValue < 30e18) { return 4; }
+        else if(liquidityEthValue >= 30e18 && liquidityEthValue < 40e18) { return 5; }
+        else if(liquidityEthValue >= 40e18 && liquidityEthValue < 50e18) { return 6; }
+        else if(liquidityEthValue >= 50e18) { return 7; }
+    }
+
+    // Generates lottery tickets for users based on their current level and new level
+    function generateLotteryTickets(address user) internal  {
+        uint256 currentLevel = lastTicketLevel[user];
+        uint256 newLevel = getUserLotteryLevel(user);
+
+        for(uint256 i = currentLevel; i < newLevel; i++) {
+            LotteryTicket memory ticket;
+            if(i == 0) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 0,
+                    levelThreeChance: 0,
+                    levelFourChance: 0,
+                    levelFiveChance: 0
+                });
+            } else if (i == 1) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 50,
+                    levelThreeChance: 0,
+                    levelFourChance: 0,
+                    levelFiveChance: 0
+                });
+            } else if (i == 2) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 50,
+                    levelFourChance: 0,
+                    levelFiveChance: 0
+                });
+            } else if (i == 3) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 100,
+                    levelFourChance: 50,
+                    levelFiveChance: 0
+                });
+            } else if (i == 4) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 100,
+                    levelFourChance: 100,
+                    levelFiveChance: 50
+                });
+            // Level 6 is an automatic winning ticket at every level
+            } else if (i == 5) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 100,
+                    levelFourChance: 100,
+                    levelFiveChance: 100
+                });
+            // Level 7 is two automatic winning tickets at every level
+            } else if (i == 6) {
+                ticket = LotteryTicket({
+                    owner: user,
+                    levelOneChance: 100,
+                    levelTwoChance: 100,
+                    levelThreeChance: 100,
+                    levelFourChance: 100,
+                    levelFiveChance: 100
+                });
+                // Add the extra ticket
+                ticketCount = ticketCount.add(1);
+                tickets[ticketCount] = ticket;
+            }
+
+            // Add the ticket to the lottery
+            if(ticket.owner != address(0)) {
+                ticketCount = ticketCount.add(1);
+                tickets[ticketCount] = ticket;
+            }
+        }
+        lastTicketLevel[user] = newLevel;
     }
 }
