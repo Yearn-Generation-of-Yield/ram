@@ -316,8 +316,6 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
-
-
         _beforeTokenTransfer(sender, recipient, amount);
 
         _balances[sender] = _balances[sender].sub(
@@ -334,7 +332,6 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
         _balances[recipient] = _balances[recipient].add(transferToAmount);
         emit Transfer(sender, recipient, transferToAmount);
-
 
         if(transferToFeeDistributorAmount > 0 && feeDistributor != address(0)){
             _balances[feeDistributor] = _balances[feeDistributor].add(transferToFeeDistributorAmount);
