@@ -11,7 +11,7 @@ const NFTFactory = artifacts.require('NFTFactory');
 
 module.exports = function(deployer, network, accounts) {
 
-   // [KOVAN TESTNET DEPLOYMENT]
+  // [KOVAN TESTNET DEPLOYMENT]
   // let setterAccount = deployer.networks.kovan.from;
   // let devAccount = "0xB5aC192829C65Fd553bFb0381E1139867A4626FD";
   // let teamAddr = "0x08F57A4acCfEB2970E0A56270160719A1aa5b4A4";
