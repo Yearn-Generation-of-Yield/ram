@@ -12,9 +12,9 @@ const FeeApprover = artifacts.require('FeeApprover');
 
 const truffleAssert = require("truffle-assertions");
 const assert = require("chai").assert;
+const timeMachine = require('ganache-time-traveler');
 
 contract("UniRAMRouter", accounts => {
-
     let testAccount = accounts[0];
     let setterAccount = accounts[1];
     let testAccount2 = accounts[2];
@@ -24,6 +24,10 @@ contract("UniRAMRouter", accounts => {
     let rengeneratorAddr = accounts[5];
 
     beforeEach(async () => {
+        // Take time snapshot
+        let snapshot = await timeMachine.takeSnapshot();
+        snapshotId = snapshot['result'];
+
         // Deploy a new Uniswap Factory and set 'setterAccount' which collects fees
         this.uniV2Factory = await UniV2Factory.new(setterAccount);
 
@@ -56,6 +60,7 @@ contract("UniRAMRouter", accounts => {
 
         // Sets transferCheckerAddress() to setter account
         await this.RAMToken.setShouldTransferChecker(this.feeapprover.address, { from: setterAccount });
+        await this.RAMToken.setFeeDistributor(this.RAMvault.address, { from: setterAccount });
 
         // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
         await this.YGYToken.transfer(this.YGYWETHPair.address, (4*1e18).toString(), { from: setterAccount });
@@ -187,9 +192,51 @@ contract("UniRAMRouter", accounts => {
         assert.isTrue(userAfterWithdraw.amount == 0);
         assert.isTrue(userAfterWithdraw.boostAmount == 0);
 
-
         const poolAfterWithdraw = await this.RAMvault.poolInfo.call(0);
         assert.isTrue(poolAfterWithdraw.effectiveAdditionalTokensFromBoosts == 0);
+     });
+
+     it("RAM vault: earn rewards", async () => {
+        // Add a new pool
+        truffleAssert.passes(
+            await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount })
+        );
+
+        truffleAssert.passes(
+            await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() })
+        );
+
+        // Approve and deposit
+        await this.YGYRAMPair.approve(this.RAMvault.address, (5*1e17).toString(), { from: testAccount2 });
+        truffleAssert.passes(
+            await this.RAMvault.deposit(0, (5*1e17).toString(), { from: testAccount2 })
+        );
+
+        const beforeBalUser = Number(await this.RAMToken.balanceOf(testAccount2));
+        const belowBalVault = Number(await this.RAMToken.balanceOf(this.RAMvault.address));
+        console.log("User balance before:", beforeBalUser);
+        console.log("Vault balance before:", belowBalVault);
+
+        // Do some token transfers
+        await this.RAMToken.transfer(testAccount, 5e18.toString(), { from: setterAccount });
+        await this.RAMToken.transfer(setterAccount, 4.5e18.toString(), { from: testAccount });
+        await this.RAMToken.transfer(testAccount, 3e18.toString(), { from: setterAccount });
+
+        // Advance time forward a month
+        const oneMonthInSeconds = 2419200;
+        await timeMachine.advanceTimeAndBlock(oneMonthInSeconds);
+
+        truffleAssert.passes(
+            await this.RAMvault.withdraw(0, (4e17).toString(), { from: testAccount2 })
+        );
+
+        const afterBalUser = Number(await this.RAMToken.balanceOf(testAccount2));
+        const afterBalVault = Number(await this.RAMToken.balanceOf(this.RAMvault.address));
+        console.log("User balance after:", afterBalUser);
+        console.log("Vault balance after:", afterBalVault);
+
+        assert.isTrue(afterBalUser > beforeBalUser);
+        assert.isTrue(afterBalVault < belowBalVault);
      });
 
     // With lottery ticket {levelOneChance: 100, levelTwoChance: 50, levelThreeChance: 0, levelFourChance: 0, levelFiveChance: 0 }

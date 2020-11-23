@@ -115,7 +115,7 @@ contract RAMVault is OwnableUpgradeSafe {
     event Boost(address indexed user, uint256 indexed pid, uint256 indexed level);
 
     function initialize(
-        INBUNIERC20 _ram,
+        address _ram,
         address _devaddr,
         address _teamaddr,
         address _regeneratoraddr,
@@ -123,7 +123,7 @@ contract RAMVault is OwnableUpgradeSafe {
     ) public initializer {
         OwnableUpgradeSafe.__Ownable_init();
         DEV_FEE = 724;
-        ram = _ram;
+        ram = INBUNIERC20(_ram);
         devaddr = _devaddr;
         teamaddr = _teamaddr;
         regeneratoraddr = _regeneratoraddr;
@@ -236,11 +236,12 @@ contract RAMVault is OwnableUpgradeSafe {
     // Function that adds pending rewards, called by the RAM token.
     // ----
     uint256 private ramBalance;
-    function addPendingRewards(uint256 _) public {
-        uint256 newRewards = ram.balanceOf(address(this)).sub(ramBalance);
+    function addPendingRewards(uint256 _amount) public {
+        uint256 newRewards = _amount;
+        // uint256 newRewards = ram.balanceOf(_amount).sub(ramBalance);
 
         if(newRewards > 0) {
-            ramBalance = ram.balanceOf(address(this)); // If there is no change the balance didn't change
+            // ramBalance = ram.balanceOf(address(this)); // If there is no change the balance didn't change
             pendingRewards = pendingRewards.add(newRewards);
             rewardsInThisEpoch = rewardsInThisEpoch.add(newRewards);
         }
