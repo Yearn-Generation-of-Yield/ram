@@ -273,7 +273,7 @@ contract("Governance", accounts => {
         await timeMachine.advanceTimeAndBlock(moreThanOneMonth);
 
         truffleAssert.passes(
-            await this.governance.unlockOldestTimelock({ from: testAccount })
+            await this.governance.unlockOldestTimelock(2, { from: testAccount })
         );
 
         const userSecond = await this.governance.users.call(testAccount);

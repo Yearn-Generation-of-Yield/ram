@@ -135,10 +135,10 @@ contract RAMVault is OwnableUpgradeSafe {
         boostLevelTwoCost = 15 * 1e18;   // 15 RAM tokens
         boostLevelThreeCost = 30 * 1e18; // 30 RAM tokens
         boostLevelFourCost = 60 * 1e18;  // 60 RAM tokens
-        boostLevelOneMultiplier = 50000000000000000;     // 5%
-        boostLevelTwoMultiplier = 150000000000000000;    // 15%
-        boostLevelThreeMultiplier = 300000000000000000;  // 30%
-        boostLevelFourMultiplier = 600000000000000000;   // 60%
+        boostLevelOneMultiplier = 5000000000000000000;     // 5%
+        boostLevelTwoMultiplier = 15000000000000000000;    // 15%
+        boostLevelThreeMultiplier = 30000000000000000000;  // 30%
+        boostLevelFourMultiplier = 60000000000000000000;   // 60%
     }
 
     // --------------------------------------------
@@ -440,7 +440,7 @@ contract RAMVault is OwnableUpgradeSafe {
         UserInfo storage user = userInfo[_pid][msg.sender];
 
         require(
-            user.boostLevel <= level,
+            level > user.boostLevel,
             "Cannot downgrade level or same level"
         );
 
@@ -457,21 +457,23 @@ contract RAMVault is OwnableUpgradeSafe {
 
         // If user has staked balances, then set their new accounting balance
         if (user.amount > 0) {
-            // Get the previous accounting balance
-            uint256 prevBalancesAccounting = user.boostAmount;
             // Get the new multiplier
-            uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
+            uint256 accTotalMultiplier = getTotalMultiplier(level);
+
             // Calculate new accounting  balance
-            uint256 newBalancesAccounting = user.amount
+            uint256 newAccountingAmount = user.amount
                 .mul(accTotalMultiplier)
                 .div(1e18)
-                .sub(user.amount);
-            // Set the accounting balance
-            user.boostAmount = newBalancesAccounting;
+                .div(100);
 
-            // Get the difference for adjusting the total accounting balance
-            uint256 diffBalancesAccounting = newBalancesAccounting.sub(prevBalancesAccounting);
-            pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.sub(diffBalancesAccounting);
+           // Get the user's previous accounting balance
+            uint256 prevBalancesAccounting = user.boostAmount;
+
+            // Set the user' new accounting balance
+             user.boostAmount = newAccountingAmount;
+            // Get the difference to adjust the total accounting balance
+            uint256 diffBalancesAccounting = newAccountingAmount.sub(prevBalancesAccounting);
+            pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.add(diffBalancesAccounting);
         }
 
         boostFees = boostFees.add(finalCost);
@@ -490,7 +492,7 @@ contract RAMVault is OwnableUpgradeSafe {
         } else if (boostLevel == 4) {
             boostMultiplier = boostLevelFourMultiplier;
         }
-        return boostMultiplier.add(1 * 10**18);
+        return boostMultiplier;
     }
 
     // Calculate the cost for purchasing a boost.
