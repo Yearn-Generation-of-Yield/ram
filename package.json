@@ -25,7 +25,8 @@
     "truffle": "^5.1.41",
     "truffle-assertions": "^0.9.2",
     "truffle-flattener": "^1.4.4",
-    "truffle-ledger-provider": "https://github.com/UMAprotocol/truffle-ledger-provider"
+    "truffle-ledger-provider": "https://github.com/UMAprotocol/truffle-ledger-provider",
+    "truffle-plugin-verify": "^0.5.1"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.5",

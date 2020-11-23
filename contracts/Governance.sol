@@ -22,10 +22,11 @@ contract Governance {
         uint256 number; // Number from 1-8 indicating the desired LGE regenerator tax %
         uint256 liquidYGY;
         uint256 timelockedYGY;
-        // timelocks is a stack data structure implemented using a hashmap
-        mapping(uint256 => TimeLock) timelocks;
-        uint256 timelockTop;
-        uint256 timelockLifetimeCount;
+        // The timelocks are stack data structure implemented via hashmaps,
+        // there's a stack at each level (1-4)
+        mapping(uint256 => mapping(uint256 => TimeLock)) timelocks; // mapping(level => timelock ID => timelock object)
+        mapping(uint256 => uint256) timelockTop; // mapping (level => top of stack at this level)
+        mapping(uint256 => uint256) timelockCount; // mapping (level => current number timelocks at this level)
     }
 
     struct TimeLock {
@@ -121,13 +122,13 @@ contract Governance {
             unlockTime: block.timestamp.add(getDurationForLevel(_level))
         });
 
-        // Increment index total count, add to user's timelocks, and update stack of timelocks
-        if(user.timelockLifetimeCount == 0) {
-            user.timelockTop = 1;
+        if(user.timelockTop[_level] == 0) {
+            user.timelockTop[_level] = user.timelockTop[_level].add(1);
         }
-        uint256 newTimelockLifetimeCount = user.timelockLifetimeCount.add(1);
-        user.timelocks[newTimelockLifetimeCount] = timelock;
-        user.timelockLifetimeCount = newTimelockLifetimeCount;
+
+        uint256 newTimelockCount = user.timelockCount[_level].add(1);
+        user.timelocks[_level][newTimelockCount] = timelock;
+        user.timelockCount[_level] = newTimelockCount;
 
         // Add the new voting power to user and the total voting power
         user.timelockedYGY = user.timelockedYGY.add(effectiveAmount);
@@ -136,10 +137,13 @@ contract Governance {
         calcWeightedNumber(msg.sender);
     }
 
+    event Log(uint number);
+
     // User unlocks their oldest timelock, receiving all the YGY tokens directly to their address
-    function unlockOldestTimelock() public {
+    function unlockOldestTimelock(uint256 _level) public {
         User storage user = users[msg.sender];
-        TimeLock storage timelock = user.timelocks[user.timelockTop];
+        uint256 levelTimelockTop = user.timelockTop[_level];
+        TimeLock storage timelock = user.timelocks[_level][levelTimelockTop];
         require(block.timestamp >= timelock.unlockTime, "Tokens are still timelocked");
 
         // Update user's timelocked balances and user's liquid balances
@@ -151,8 +155,9 @@ contract Governance {
         totalYGY = totalYGY.sub(timelock.multipliedAmount).add(underlyingAmount);
 
         // Delete the timelock and update user's timelock stack
-        delete user.timelocks[user.timelockTop];
-        user.timelockTop = user.timelockTop.add(1);
+        delete user.timelocks[_level][levelTimelockTop];
+        user.timelockTop[_level] = levelTimelockTop.add(1);
+        user.timelockCount[_level] = user.timelockCount[_level].sub(1);
 
         calcWeightedNumber(msg.sender);
     }
