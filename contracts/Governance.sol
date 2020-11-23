@@ -137,8 +137,6 @@ contract Governance {
         calcWeightedNumber(msg.sender);
     }
 
-    event Log(uint number);
-
     // User unlocks their oldest timelock, receiving all the YGY tokens directly to their address
     function unlockOldestTimelock(uint256 _level) public {
         User storage user = users[msg.sender];
