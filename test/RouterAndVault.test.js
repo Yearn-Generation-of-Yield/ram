@@ -147,24 +147,49 @@ contract("UniRAMRouter", accounts => {
             await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() })
         );
 
+        // Approve and deposit
+        await this.YGYRAMPair.approve(this.RAMvault.address, (1*1e17).toString(), { from: testAccount2 });
+        truffleAssert.passes(
+            await this.RAMvault.deposit(0, (1*1e17).toString(), { from: testAccount2 })
+        );
+
+        const userBefore = await this.RAMvault.userInfo.call(0, testAccount2);
+        assert.isTrue(userBefore.boostLevel == 0);
+        assert.isTrue(userBefore.amount == (1e17));
+        assert.isTrue(userBefore.boostAmount == 0);
+
+        const poolBefore = await this.RAMvault.poolInfo.call(0);
+        assert.isTrue(poolBefore.effectiveAdditionalTokensFromBoosts == 0);
+
         // Load testAccount2
         await this.RAMToken.transfer(testAccount2, (5.8 * 1e18).toString(), { from: setterAccount });
 
         // Approve RAM tokens and purchase boost
-        await this.RAMToken.approve(this.RAMvault.address, (5.4 * 1e18).toString(), { from: testAccount2 });
+        await this.RAMToken.approve(this.RAMvault.address, (5.8 * 1e18).toString(), { from: testAccount2 });
         truffleAssert.passes(
             await this.RAMvault.purchase(0, 1, { from: testAccount2 })
         );
 
-        // Approve and deposit
-        await this.YGYRAMPair.approve(this.RAMvault.address, (5*1e17).toString(), { from: testAccount2 });
-        truffleAssert.passes(
-            await this.RAMvault.deposit(0, (5*1e17).toString(), { from: testAccount2 })
-        );
+        const userAfter = await this.RAMvault.userInfo.call(0, testAccount2);
+        assert.isTrue(userAfter.boostLevel == 1);
+        assert.isTrue(userAfter.amount == (1e17));
+        assert.isTrue(userAfter.boostAmount == (1e17*0.05));
+
+        const poolAfter = await this.RAMvault.poolInfo.call(0);
+        assert.isTrue(poolAfter.effectiveAdditionalTokensFromBoosts == (1e17*0.05));
 
         truffleAssert.passes(
-            await this.RAMvault.withdraw(0, (5*1e17).toString(), { from: testAccount2 })
+            await this.RAMvault.withdraw(0, (1e17).toString(), { from: testAccount2 })
         );
+
+        const userAfterWithdraw = await this.RAMvault.userInfo.call(0, testAccount2);
+        assert.isTrue(userAfterWithdraw.boostLevel == 1);
+        assert.isTrue(userAfterWithdraw.amount == 0);
+        assert.isTrue(userAfterWithdraw.boostAmount == 0);
+
+
+        const poolAfterWithdraw = await this.RAMvault.poolInfo.call(0);
+        assert.isTrue(poolAfterWithdraw.effectiveAdditionalTokensFromBoosts == 0);
      });
 
     // With lottery ticket {levelOneChance: 100, levelTwoChance: 50, levelThreeChance: 0, levelFourChance: 0, levelFiveChance: 0 }
