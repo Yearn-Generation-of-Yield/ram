@@ -59,7 +59,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Sets transferCheckerAddress() to setter account
     await RAMToken.setShouldTransferChecker(feeapprover.address);
-    await RAMToken.setFeeDistributor(RAMvault.address);
+    await RAMToken.setFeeDistributor(RAMVault.address);
 
     // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
     await YGYToken.transfer(YGYWETHPair.address, twoThousand);
