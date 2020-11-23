@@ -434,8 +434,6 @@ contract RAMVault is OwnableUpgradeSafe {
     //                  Boosts
     // --------------------------------------------
 
-    event Log(uint256 _number);
-
     // Purchase a multiplier level for an individual user for an individual pool, same level cannot be purchased twice.
     function purchase(uint256 _pid, uint256 level) external {
         PoolInfo storage pool = poolInfo[_pid];
