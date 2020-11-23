@@ -71,7 +71,6 @@ contract("UniRAMRouter", accounts => {
         await this.RAMToken.transfer(this.YGYRAMPair.address, (5*1e18).toString(), { from: setterAccount });
         await this.YGYRAMPair.mint(setterAccount);
 
-
         // Deploy NFT Factory
         this.nftFactory = await NFTFactory.new({ from: setterAccount });
         // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
