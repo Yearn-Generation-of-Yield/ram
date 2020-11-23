@@ -54,8 +54,12 @@ module.exports = function(deployer, network, accounts) {
 
     await feeapprover.setPaused(false);
 
+    // Deploy RAMvault to manage yield farms
+    const RAMVault = await deployer.deploy(RAMVAULT);
+
     // Sets transferCheckerAddress() to setter account
     await RAMToken.setShouldTransferChecker(feeapprover.address);
+    await RAMToken.setFeeDistributor(RAMvault.address);
 
     // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
     await YGYToken.transfer(YGYWETHPair.address, twoThousand);
@@ -65,9 +69,6 @@ module.exports = function(deployer, network, accounts) {
     await YGYToken.transfer(YGYRAMPair.address, fiveThousand);
     await RAMToken.transfer(YGYRAMPair.address, fiveThousand);
     await YGYRAMPair.mint(setterAccount);
-
-    // Deploy RAMvault to manage yield farms
-    const RAMVault = await deployer.deploy(RAMVAULT);
 
     // Deploy NFT Factory
     const nftFactory = await deployer.deploy(NFTFactory);
