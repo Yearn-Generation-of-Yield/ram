@@ -9,3 +9,4 @@ yarn-error.log
 contracts.orig
 Proxy/node_modules
 .env
+password.js
