@@ -15,9 +15,10 @@ module.exports = {
     },
     kovan: {
       provider: kovanProvider,
-      network_id: 42,
-      gas: 4600000
-    }
+      network_id: "42",
+      gasPrice: 100000000000,
+      gas: 8200000,
+    },
   },
   compilers: {
     solc: {
@@ -30,5 +31,9 @@ module.exports = {
        }
       }
     }
-  }
+  },
+  plugins: ["truffle-plugin-verify"],
+  api_keys: {
+    etherscan: process.env.ETHERSCAN_API_KEY,
+  },
 };
