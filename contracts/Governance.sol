@@ -68,7 +68,8 @@ contract Governance {
     }
 
     // users can lock YGY for time durations to get multipliers on their YGY
-    function timelockYGY(uint256 _amount, uint256 _level) public {
+    function timelockYGY(uint256 _amount, uint256 _level, uint256 _number) public {
+        require(_number >= 1 && _number <= 8, "Number must be in range 1-8");
         require(YGYToken.transferFrom(msg.sender, address(this), _amount), "Have tokens been approved?");
 
         User storage user = users[msg.sender];
@@ -93,6 +94,8 @@ contract Governance {
         user.timelockedYGY = user.timelockedYGY.add(effectiveAmount);
         votingShares = votingShares.add(effectiveAmount);
 
+        // Update number and calc new weighted number
+        user.number = _number;
         calcWeightedNumber(msg.sender);
     }
 
