@@ -119,9 +119,6 @@ contract("Governance", accounts => {
     it("should be able to timelock YGY tokens", async () => {
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
-        // Set number
-        await this.governance.setUserNumber(5, { from: testAccount });
-
         // Check initial values
         const userFirst = await this.governance.users.call(testAccount);
         assert.isTrue(userFirst.timelockedYGY == 0);
@@ -132,7 +129,7 @@ contract("Governance", accounts => {
 
         await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
         truffleAssert.passes(
-            await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
+            await this.governance.timelockYGY(1e18.toString(), 2, 5, { from: testAccount })
         );
 
         // Level 2 applies a 3x multiplier for a lockup duration of one month
@@ -153,9 +150,8 @@ contract("Governance", accounts => {
         const beforeTotalYGY = await this.governance.votingShares.call();
         assert.isTrue(beforeTotalYGY == 0);
 
-        await this.governance.setUserNumber(2, { from: testAccount });
         truffleAssert.passes(
-            await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
+            await this.governance.timelockYGY(1e18.toString(), 2, 2, { from: testAccount })
         );
 
         // Level 3 applies a 300% multipliers
@@ -164,9 +160,8 @@ contract("Governance", accounts => {
         const firstWeightedNumber = await this.governance.weightedNumber.call();
         assert.isTrue(firstWeightedNumber == 2);
 
-        await this.governance.setUserNumber(8, { from: testAccount2 });
         truffleAssert.passes(
-            await this.governance.timelockYGY(1e18.toString(), 3, { from: testAccount2 })
+            await this.governance.timelockYGY(1e18.toString(), 3, 8, { from: testAccount2 })
         );
 
         // (1*10)+(1*3) = 13
@@ -181,11 +176,9 @@ contract("Governance", accounts => {
     it("should be able to retrieve timelocked YGY tokens", async () => {
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
-        await this.governance.setUserNumber(5, { from: testAccount });
-
         await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
         truffleAssert.passes(
-            await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
+            await this.governance.timelockYGY(1e18.toString(), 2, 8, { from: testAccount })
         );
 
         // Level 2 applies a 3x multiplier for a lockup duration of one month
