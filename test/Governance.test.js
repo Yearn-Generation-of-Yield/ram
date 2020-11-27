@@ -102,170 +102,98 @@ contract("Governance", accounts => {
     });
 
     it("should be able to set number selection", async () => {
-        await this.governance.setUserNumber(2, { from: testAccount });
+        const initialWeightedNumber = Number(await this.governance.weightedNumber.call());
+        assert.isTrue(initialWeightedNumber == 1);
 
+        await this.governance.setUserNumber(5, { from: testAccount });
+
+        // User number should increase
         const userAfter = await this.governance.users.call(testAccount);
-        assert.isTrue(userAfter.number == 2);
-    });
+        assert.isTrue(userAfter.number == 5);
 
-    it("should be able to deposit liquid YGY", async () => {
-        await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
-
-        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
-        );
-
-        const userAfter = await this.governance.users.call(testAccount);
-        assert.isTrue(userAfter.number == 2);
-        assert.isTrue(userAfter.liquidYGY == 1e18);
-
-        const totalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGY == 1e18);
-
-        const weightedNumber = await this.governance.weightedNumber.call();
-        assert.isTrue(weightedNumber == 2);
-    });
-
-    it("should be able to withdraw liquid YGY", async () => {
-        await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
-
-        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
-        );
-
-        truffleAssert.passes(
-            await this.governance.withdrawLiquidYGY(0.5e18.toString(), { from: testAccount })
-        );
-
-        const userAfter = await this.governance.users.call(testAccount);
-        assert.isTrue(userAfter.number == 2);
-        assert.isTrue(userAfter.liquidYGY == 0.5e18);
-
-        const totalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGY == 0.5e18);
-
-        truffleAssert.passes(
-            await this.governance.withdrawLiquidYGY(0.5e18.toString(), { from: testAccount })
-        );
-
-        const userAfterTwo = await this.governance.users.call(testAccount);
-        assert.isTrue(userAfterTwo.number == 2);
-        assert.isTrue(userAfterTwo.liquidYGY == 0);
-
-        const totalYGYTwo = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGYTwo == 0);
-    });
-
-    it("should weight votes amongst multiple users", async () => {
-        await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
-        await this.YGYToken.transfer(testAccount2, 2e18.toString(), { from: setterAccount });
-
-        await this.YGYToken.approve(this.governance.address, 1e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
-        );
-
-        const firstTotalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(firstTotalYGY == 1e18);
-        const firstWeightedNumber = await this.governance.weightedNumber.call();
-        assert.isTrue(firstWeightedNumber == 2);
-
-        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount2 });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(2e18.toString(), 5, { from: testAccount2 })
-        );
-
-        const secondTotalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(secondTotalYGY == 3e18);
-        // Weighted number should be 4
-        const secondWeightedNumber = await this.governance.weightedNumber.call();
-        assert.isTrue(secondWeightedNumber == 4);
+        // User had no stake, global weighted number shouldn't change
+        const afterWeightedNumber = Number(await this.governance.weightedNumber.call());
+        assert.isTrue(afterWeightedNumber == 1);
     });
 
     it("should be able to timelock YGY tokens", async () => {
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
-        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
-        );
+        // Set number
+        await this.governance.setUserNumber(5, { from: testAccount });
 
+        // Check initial values
         const userFirst = await this.governance.users.call(testAccount);
-        assert.isTrue(userFirst.liquidYGY == 1e18);
         assert.isTrue(userFirst.timelockedYGY == 0);
+        const votingSharesFirst = await this.governance.votingShares.call();
+        assert.isTrue(votingSharesFirst == 0e18);
+        const weightedNumberFirst = Number(await this.governance.weightedNumber.call());
+        assert.isTrue(weightedNumberFirst == 1);
 
-        const totalYGYFirst = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGYFirst == 1e18);
-
+        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
         truffleAssert.passes(
             await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
         );
 
         // Level 2 applies a 3x multiplier for a lockup duration of one month
-        const userSecond = await this.governance.users.call(testAccount);
-        assert.isTrue(userSecond.liquidYGY == 0);
-        assert.isTrue(userSecond.timelockedYGY == 3e18);
-
-        const totalYGYSecond = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGYSecond == 3e18);
+        const afterUser = await this.governance.users.call(testAccount);
+        assert.isTrue(afterUser.timelockedYGY == 3e18);
+        const afterTotalYGY = await this.governance.votingShares.call();
+        assert.isTrue(afterTotalYGY == 3e18);
+        const afterWeightedNumber = Number(await this.governance.weightedNumber.call());
+        assert.isTrue(afterWeightedNumber == 5);
     });
 
     it("should weight timelocked votes correctly", async () => {
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
+        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
         await this.YGYToken.transfer(testAccount2, 2e18.toString(), { from: setterAccount });
+        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount2 });
 
-        await this.YGYToken.approve(this.governance.address, 1e18.toString(), { from: testAccount });
+        const beforeTotalYGY = await this.governance.votingShares.call();
+        assert.isTrue(beforeTotalYGY == 0);
+
+        await this.governance.setUserNumber(2, { from: testAccount });
         truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
+            await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
         );
 
-        await this.YGYToken.approve(this.governance.address, 1e18.toString(), { from: testAccount2 });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 8, { from: testAccount2 })
-        );
-
-        const firstTotalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(firstTotalYGY == 2e18);
-        // Weighted number should be 5, as (2+8)/2 = 5
+        // Level 3 applies a 300% multipliers
+        const afterTotalYGY = await this.governance.votingShares.call();
+        assert.isTrue(afterTotalYGY == (1e18*3).toString());
         const firstWeightedNumber = await this.governance.weightedNumber.call();
-        assert.isTrue(firstWeightedNumber == 5);
+        assert.isTrue(firstWeightedNumber == 2);
 
+        await this.governance.setUserNumber(8, { from: testAccount2 });
         truffleAssert.passes(
-            await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount2 })
+            await this.governance.timelockYGY(1e18.toString(), 3, { from: testAccount2 })
         );
 
-        // (1*3)+1 = 4
-        const secondTotalYGY = await this.governance.totalYGY.call();
-        assert.isTrue(secondTotalYGY == 4e18);
+        // (1*10)+(1*3) = 13
+        const secondTotalYGY = await this.governance.votingShares.call();
+        assert.isTrue(secondTotalYGY == 13e18);
 
-        // The 'real' value should be (2+(8*3))/4 = 26/4 = 6
-        // But the contract instead uses the previous global weighted value for its calculations
-        // 5+(8*3) = 29/4 = 7.25 = rounds to 7
+        // (3*2)+(10*8)/13 = (6+80)/13 = 86/13 = 6.61538 -> rounds down to 6
         const secondWeightedNumber = await this.governance.weightedNumber.call();
-        assert.isTrue(secondWeightedNumber == 7);
+        assert.isTrue(secondWeightedNumber == 6);
     });
 
     it("should be able to retrieve timelocked YGY tokens", async () => {
         await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
-        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
-        truffleAssert.passes(
-            await this.governance.depositLiquidYGYUpdateNumber(1e18.toString(), 2, { from: testAccount })
-        );
+        await this.governance.setUserNumber(5, { from: testAccount });
 
+        await this.YGYToken.approve(this.governance.address, 2e18.toString(), { from: testAccount });
         truffleAssert.passes(
             await this.governance.timelockYGY(1e18.toString(), 2, { from: testAccount })
         );
 
         // Level 2 applies a 3x multiplier for a lockup duration of one month
         const userFirst = await this.governance.users.call(testAccount);
-        assert.isTrue(userFirst.liquidYGY == 0);
         assert.isTrue(userFirst.timelockedYGY == 3e18);
 
-        const totalYGYFirst = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGYFirst == 3e18);
+        const votingSharesFirst = await this.governance.votingShares.call();
+        assert.isTrue(votingSharesFirst == 3e18);
 
         // Advance time forward more than a month
         const oneMonthInSeconds = 2419200;
@@ -277,11 +205,10 @@ contract("Governance", accounts => {
         );
 
         const userSecond = await this.governance.users.call(testAccount);
-        assert.isTrue(userSecond.liquidYGY == 1e18);
         assert.isTrue(userSecond.timelockedYGY == 0e18);
 
-        const totalYGYSecond = await this.governance.totalYGY.call();
-        assert.isTrue(totalYGYSecond == 1e18);
+        const votingSharesSecond = await this.governance.votingShares.call();
+        assert.isTrue(votingSharesSecond == 0e18);
     });
 
 });

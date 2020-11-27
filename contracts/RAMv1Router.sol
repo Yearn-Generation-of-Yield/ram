@@ -106,7 +106,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     }
 
     function setRegeneratorTax(uint256 _regeneratorTax) public {
-        require(msg.sender != governance, "Locked to governance");
+        require(msg.sender == governance, "Locked to governance");
         regeneratorTax = _regeneratorTax;
     }
 

@@ -12,7 +12,7 @@ contract Governance {
     IRAMv1Router public RAMRouter;
 
     uint256 public weightedNumber; // Number 1-8 weighted by total user numbers
-    uint256 public totalYGY; // Includes liquid and timelocked YGY
+    uint256 public votingShares; // Includes voting shares generated fromimelocked YGY
 
     uint256 public lastRAMRouterUpdateTime; // Last time the regenerator tax on the router was updated
     bool public updateStagingMode;
@@ -20,7 +20,6 @@ contract Governance {
 
     struct User {
         uint256 number; // Number from 1-8 indicating the desired LGE regenerator tax %
-        uint256 liquidYGY;
         uint256 timelockedYGY;
         // The timelocks are stack data structure implemented via hashmaps,
         // there's a stack at each level (1-4)
@@ -68,51 +67,11 @@ contract Governance {
         RAMRouter.setRegeneratorTax(weightedNumber);
     }
 
-    // users can deposit their YGY
-    function depositLiquidYGYUpdateNumber(uint256 _amount, uint256 _number) public {
-        require(YGYToken.transferFrom(msg.sender, address(this), _amount), "Have tokens been approved?");
-        User storage user = users[msg.sender];
-
-        user.number = _number;
-        user.liquidYGY = user.liquidYGY.add(_amount);
-        totalYGY = totalYGY.add(_amount);
-
-        calcWeightedNumber(msg.sender);
-    }
-
-    // users can deposit their YGY
-    function depositLiquidYGY(uint256 _amount) public {
-        require(YGYToken.transferFrom(msg.sender, address(this), _amount), "Have tokens been approved?");
-
-        User storage user = users[msg.sender];
-        assert(user.number > 0);
-
-        user.liquidYGY = user.liquidYGY.add(_amount);
-        totalYGY = totalYGY.add(_amount);
-
-        calcWeightedNumber(msg.sender);
-    }
-
-    // Users can withdraw their YGY
-    function withdrawLiquidYGY(uint256 _amount) public {
-        User storage user = users[msg.sender];
-        require(user.liquidYGY >= _amount, "Staked amount doesn't support withdrawal");
-        require(YGYToken.transfer(msg.sender, _amount), "Transfer failed");
-
-        user.liquidYGY = user.liquidYGY.sub(_amount);
-        totalYGY = totalYGY.sub(_amount);
-
-        calcWeightedNumber(msg.sender);
-    }
-
     // users can lock YGY for time durations to get multipliers on their YGY
     function timelockYGY(uint256 _amount, uint256 _level) public {
-        User storage user = users[msg.sender];
-        require(user.liquidYGY >= _amount, "Must deposit YGY before locking the tokens");
+        require(YGYToken.transferFrom(msg.sender, address(this), _amount), "Have tokens been approved?");
 
-        // Decrement user's liquid YGY and total YGY by the amount
-        user.liquidYGY = user.liquidYGY.sub(_amount);
-        totalYGY = totalYGY.sub(_amount);
+        User storage user = users[msg.sender];
 
         // Calculate effective voting power and create new timelock
         uint256 effectiveAmount =  _amount.mul(getMultiplierForLevel(_level).div(100));
@@ -132,7 +91,7 @@ contract Governance {
 
         // Add the new voting power to user and the total voting power
         user.timelockedYGY = user.timelockedYGY.add(effectiveAmount);
-        totalYGY = totalYGY.add(effectiveAmount);
+        votingShares = votingShares.add(effectiveAmount);
 
         calcWeightedNumber(msg.sender);
     }
@@ -144,13 +103,13 @@ contract Governance {
         TimeLock storage timelock = user.timelocks[_level][levelTimelockTop];
         require(block.timestamp >= timelock.unlockTime, "Tokens are still timelocked");
 
-        // Update user's timelocked balances and user's liquid balances
+        // Update user's timelocked balances and the total YGY balance
         user.timelockedYGY = user.timelockedYGY.sub(timelock.multipliedAmount);
-        uint256 underlyingAmount = timelock.multipliedAmount.div(getMultiplierForLevel(timelock.level).div(100));
-        user.liquidYGY = user.liquidYGY.add(underlyingAmount);
+        votingShares = votingShares.sub(timelock.multipliedAmount);
 
-        // Update total YGY balances
-        totalYGY = totalYGY.sub(timelock.multipliedAmount).add(underlyingAmount);
+        // Send underlying amount of tokens to user
+        uint256 underlyingAmount = timelock.multipliedAmount.div(getMultiplierForLevel(timelock.level).div(100));
+        YGYToken.transfer(msg.sender, underlyingAmount);
 
         // Delete the timelock and update user's timelock stack
         delete user.timelocks[_level][levelTimelockTop];
@@ -164,17 +123,16 @@ contract Governance {
         User storage user = users[addr];
 
         // Calculate the sum of all weights
-        uint256 userTotalYGY = user.liquidYGY.add(user.timelockedYGY);
-        uint256 otherTotalYGY = totalYGY.sub(userTotalYGY);
+        uint256 otherTotalYGY = votingShares.sub(user.timelockedYGY);
 
         // Calculate the sum of all weighing factors
-        uint256 userWeighingFactor = userTotalYGY.mul(user.number);
+        uint256 userWeighingFactor = user.timelockedYGY.mul(user.number);
         uint256 otherWeighingFactor = otherTotalYGY.mul(weightedNumber);
         uint256 sumOfWeighingFactors = userWeighingFactor.add(otherWeighingFactor);
 
         // Weighted average = (sum weighing factors / sum of weight)
-        if(totalYGY > 0) {
-            weightedNumber = sumOfWeighingFactors.div(totalYGY);
+        if(votingShares > 0 && user.timelockedYGY > 0) {
+            weightedNumber = sumOfWeighingFactors.div(votingShares);
         }
     }
 
