@@ -58,7 +58,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
     // NFT
     INFTFactory public _NFTFactory;
-    mapping(uint256 => address) _NFTs; // Mapping of (level number => NFT address)
+    mapping(uint256 => address) public _NFTs; // Mapping of (level number => NFT address)
+    IERC20 public _dXIOTToken;
 
     constructor(
         address RAMToken,
@@ -71,7 +72,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         address RAMVault,
         address nftFactory,
         address[] memory nfts,
-        address payable _regenerator
+        address payable _regenerator,
+        address dXIOTToken
     )
         VRFConsumerBase(
             0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator (KOVAN)
@@ -88,6 +90,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         _YGYWETHPair = YGYWethPair;
         _RAMVault = IRAMVault(RAMVault);
         regenerator = _regenerator;
+        _dXIOTToken = IERC20(dXIOTToken);
         refreshApproval();
 
         _NFTFactory = INFTFactory(nftFactory);
@@ -136,15 +139,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _WETH.transfer(_YGYWETHPair, buyAmount);
 
+        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(buyAmount);
+
         (address token0, address token1) = UniswapV2Library.sortTokens(address(_WETH), _YGYToken);
         IUniswapV2Pair(_YGYWETHPair).swap(_YGYToken == token0 ? outYGY : 0, _YGYToken == token1 ? outYGY : 0, address(this), "");
 
         // Calculate tax and send directly to regenerator
         uint256 taxedAmount = outYGY.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
-
         uint256 outAmount = outYGY.sub(taxedAmount);
-        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(outAmount);
 
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), to, autoStake);
     }
@@ -162,9 +165,9 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         uint256 taxedAmount = amount.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
 
-        uint256 outAmount = amount.sub(taxedAmount);
-        liquidityContributedEthValue[msg.sender] = liquidityContributedEthValue[msg.sender].add(outAmount);
+        liquidityContributedEthValue[msg.sender] = liquidityContributedEthValue[msg.sender].add(outETH);
 
+        uint256 outAmount = amount.sub(taxedAmount);
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), msg.sender, autoStake);
     }
 
@@ -338,6 +341,13 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         else if(liquidityEthValue >= 50e18) { return 7; }
     }
 
+    // Mints a robot NFT to specified user if their dXIOT balance is over 20+
+    function mintRobotNFT(address user) internal {
+        if(_dXIOTToken.balanceOf(user) > 20e18) {
+            _NFTFactory.mint(INFT(_NFTs[6]), user);
+        }
+    }
+
     // Generates lottery tickets for users based on their current level and new level
     function generateLotteryTickets(address user) internal  {
         uint256 currentLevel = lastTicketLevel[user];
@@ -372,6 +382,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 0,
                     levelFiveChance: 0
                 });
+                mintRobotNFT(user);
             } else if (i == 3) {
                 ticket = LotteryTicket({
                     owner: user,
@@ -381,6 +392,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 50,
                     levelFiveChance: 0
                 });
+                mintRobotNFT(user);
             } else if (i == 4) {
                 ticket = LotteryTicket({
                     owner: user,
@@ -390,6 +402,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 75,
                     levelFiveChance: 50
                 });
+                mintRobotNFT(user);
             // Level 6 is an automatic winning ticket at every level except level 5, which is 50%
             } else if (i == 5) {
                 ticket = LotteryTicket({
@@ -400,6 +413,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 100,
                     levelFiveChance: 50
                 });
+                mintRobotNFT(user);
             // Level 7 is a winning ticket for each level + another winning ticket for levels 1-4
             } else if (i == 6) {
                 // Winning ticket (levels 1-5)

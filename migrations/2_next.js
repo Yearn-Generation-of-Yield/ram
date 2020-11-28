@@ -85,10 +85,16 @@ module.exports = function(deployer, network, accounts) {
     const nftAddr5 = await nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
     await nftFactory.deployNFT("RAM level 5", "RAMLEVEL5NFT", "ram.level5");
 
-    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5];
+    // Deploy a dummy dXIOT token to use as Robot NFT
+    const dXiotToken = await deployer.deploy(Token, "dXIOT", "dXIOT", tenThousand);
+
+    const robotNFT = await nftFactory.deployNFT.call("RAM Robot NFT", "RAMROBOTNFT", "ram.robot");
+    await nftFactory.deployNFT("RAM Robot NFT", "RAMROBOTNFT", "ram.robot");
+
+    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT];
 
     // Deploy RAMRouter contract
-    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr);
+    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr, dXiotToken.address);
 
     // Deploy governance contract and set on router
     const governance = await deployer.deploy(Governance, YGYToken.address, RAMRouter.address);
