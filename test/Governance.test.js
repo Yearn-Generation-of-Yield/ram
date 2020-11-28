@@ -85,10 +85,19 @@ contract("Governance", accounts => {
         const nftAddr5 = await this.nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5", { from: setterAccount });
         await this.nftFactory.deployNFT("RAM level 5", "RAMLEVEL1NFT", "ram.level5", { from: setterAccount });
 
-        this.nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5];
+        // Deploy a dummy dXIOT token to use as Robot NFT
+        this.dXiotToken = await Token.new("dXIOT", "dXIOT", (90*1e18).toString(), { from: setterAccount });
+        const robotNFT = await this.nftFactory.deployNFT.call("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
+
+        // Deploy a dummy dXIOT token to use as Robot NFT
+        const linkNFT = await this.nftFactory.deployNFT.call("RAM LINK NFT", "RAMLINKNFT", "ram.link", { from: setterAccount });
+        await this.nftFactory.deployNFT("RAM LINK NFT", "RAMLINKNFT", "ram.link", { from: setterAccount });
+
+        this.nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT, linkNFT];
 
         // // Deploy RAMRouter contract
-        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, this.nftFactory.address, this.nftAddrs, rengeneratorAddr, { from: setterAccount });
+        this.RAMRouter = await UniRAMRouter.new(this.RAMToken.address, this.YGYToken.address, this.weth.address, this.uniV2Factory.address, this.YGYRAMPair.address, this.YGYWETHPair.address, this.feeapprover.address, this.RAMvault.address, this.nftFactory.address, this.nftAddrs, rengeneratorAddr, this.dXiotToken.address, { from: setterAccount });
 
         // // Bond NFT factory and deploy NFTs using RAM router
         await this.nftFactory.bondContract(this.RAMRouter.address, { from: setterAccount });
