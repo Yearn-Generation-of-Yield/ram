@@ -18,10 +18,11 @@ contract("UniRAMRouter", accounts => {
     let testAccount = accounts[0];
     let setterAccount = accounts[1];
     let testAccount2 = accounts[2];
-    let devAccount = accounts[3];
+    let testAccount3 = accounts[3];
+    let devAccount = accounts[4];
 
-    let teamAddr = accounts[4];
-    let rengeneratorAddr = accounts[5];
+    let teamAddr = accounts[5];
+    let rengeneratorAddr = accounts[6];
 
     beforeEach(async () => {
         // Take time snapshot
@@ -86,7 +87,7 @@ contract("UniRAMRouter", accounts => {
         await this.nftFactory.deployNFT("RAM level 5", "RAMLEVEL1NFT", "ram.level5", { from: setterAccount });
 
         // Deploy a dummy dXIOT token to use as Robot NFT
-        this.dXiotToken = await Token.new("dXIOT", "dXIOT", (20*1e18).toString(), { from: setterAccount });
+        this.dXiotToken = await Token.new("dXIOT", "dXIOT", (90*1e18).toString(), { from: setterAccount });
 
         const robotNFT = await this.nftFactory.deployNFT.call("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
         await this.nftFactory.deployNFT("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
@@ -244,8 +245,13 @@ contract("UniRAMRouter", accounts => {
         assert.isTrue(afterBalVault < belowBalVault);
      });
 
+    //  NOTE:
+    //  To test the next two functions, modify the RAMv1Router contract by modifying function applyRandomNumberToLottery():
+    //  1. Delete the 'random ready' require check
+    //  2. Add `randomResult = 49` to the start of the function
+
     // With lottery ticket {levelOneChance: 100, levelTwoChance: 50, levelThreeChance: 0, levelFourChance: 0, levelFiveChance: 0 }
-    //  and with a random result of 51, this test should return true
+    //  and with a random result of 49, this test should return true
     //  it("should win NFTs based on the random number", async () => {
     //     await this.YGYToken.transfer(testAccount, 2e18.toString(), { from: setterAccount });
 
@@ -254,19 +260,11 @@ contract("UniRAMRouter", accounts => {
     //         await this.RAMRouter.addLiquidityYGYOnly(2e18.toString(), false, { from: testAccount })
     //     );
 
-    //     const ethValueOfContributions = Number(await this.RAMRouter.liquidityContributedEthValue.call(testAccount));
-    //     console.log("ethValueOfContributions:", ethValueOfContributions);
-    //     const userLotteryLevel = Number(await this.RAMRouter.getUserLotteryLevel.call(testAccount));
-    //     console.log("userLotteryLevel:", userLotteryLevel);
-
     //     const NFTOne = await NFT.at(this.nftAddrs[0]);
     //     const NFTTwo = await NFT.at(this.nftAddrs[1]);
 
     //     const levelOneNFTBalanceBefore = Number(await NFTOne.balanceOf.call(testAccount));
     //     const levelTwoNFTBalanceBefore = Number(await NFTTwo.balanceOf.call(testAccount));
-
-    //     console.log("levelOneNFTBalanceBefore:", levelOneNFTBalanceBefore)
-    //     console.log("levelTwoNFTBalanceBefore:", levelTwoNFTBalanceBefore)
 
     //     truffleAssert.passes(
     //         await this.RAMRouter.applyRandomNumberToLottery({ from: testAccount })
@@ -275,10 +273,36 @@ contract("UniRAMRouter", accounts => {
     //     const levelOneNFTBalanceAfter = Number(await NFTOne.balanceOf.call(testAccount));
     //     const levelTwoNFTBalanceAfter = Number(await NFTTwo.balanceOf.call(testAccount));
 
-    //     console.log("levelOneNFTBalanceAfter:", levelOneNFTBalanceAfter)
-    //     console.log("levelTwoNFTBalanceAfter:", levelTwoNFTBalanceAfter)
-
     //     assert.isTrue(levelOneNFTBalanceAfter == (levelOneNFTBalanceBefore+1));
     //     assert.isTrue(levelTwoNFTBalanceAfter == (levelTwoNFTBalanceBefore));
+    // });
+
+    // it("should earn RobotNFTs for holding 20+ dXIOT at wrap time at 10 ETH intervals", async () => {
+    //     await this.dXiotToken.transfer(testAccount3, 25e18.toString(), { from: setterAccount });
+
+    //     // Load test account with 20+ dXIOT
+    //     truffleAssert.passes(
+    //         await this.RAMRouter.addLiquidityETHOnly(testAccount3, false, { from: testAccount3, value: (11e18).toString() })
+    //     );
+
+    //     truffleAssert.passes(
+    //         await this.RAMRouter.applyRandomNumberToLottery({ from: testAccount3 })
+    //     );
+
+    //     const NFTOne = await NFT.at(this.nftAddrs[0]);
+    //     const NFTTwo = await NFT.at(this.nftAddrs[1]);
+    //     const NFTThree = await NFT.at(this.nftAddrs[2]);
+    //     const NFTFour = await NFT.at(this.nftAddrs[3]);
+    //     const balanceNFTOne = Number(await NFTOne.balanceOf.call(testAccount3));
+    //     const balanceNFTTwo = Number(await NFTTwo.balanceOf.call(testAccount3));
+    //     const balanceNFTThree = Number(await NFTThree.balanceOf.call(testAccount3));
+    //     const balanceNFTFour = Number(await NFTFour.balanceOf.call(testAccount3));
+    //     assert.isTrue(balanceNFTOne == 1);
+    //     assert.isTrue(balanceNFTTwo == 1);
+    //     assert.isTrue(balanceNFTThree == 1);
+    //     assert.isTrue(balanceNFTFour == 0);
+
+    //     const robotNFT = await NFT.at(this.nftAddrs[5]);
+    //     assert.isTrue(await robotNFT.balanceOf.call(testAccount3) == 1);
     // });
 });

@@ -139,15 +139,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _WETH.transfer(_YGYWETHPair, buyAmount);
 
+        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(buyAmount);
+
         (address token0, address token1) = UniswapV2Library.sortTokens(address(_WETH), _YGYToken);
         IUniswapV2Pair(_YGYWETHPair).swap(_YGYToken == token0 ? outYGY : 0, _YGYToken == token1 ? outYGY : 0, address(this), "");
 
         // Calculate tax and send directly to regenerator
         uint256 taxedAmount = outYGY.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
-
         uint256 outAmount = outYGY.sub(taxedAmount);
-        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(outAmount);
 
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), to, autoStake);
     }
@@ -165,16 +165,11 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         uint256 taxedAmount = amount.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
 
-        uint256 outAmount = amount.sub(taxedAmount);
-        liquidityContributedEthValue[msg.sender] = liquidityContributedEthValue[msg.sender].add(outAmount);
+        liquidityContributedEthValue[msg.sender] = liquidityContributedEthValue[msg.sender].add(outETH);
 
+        uint256 outAmount = amount.sub(taxedAmount);
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), msg.sender, autoStake);
     }
-
-
-    // Bonus NFT (Robot) for holding 20 dXIOT in wallet at time of wrap)
-    // for the first 200 contributors that deposit a minimum of 10 ETH
-    // (each deposit of 10 eth, even if by the same address, counts as 1 separate contributor)
 
     // With buyAmount*2 amount of YGY tokens on the contract, this function market buys RAM with buyAmount
     // of YGY and then calls _addLiquidity
