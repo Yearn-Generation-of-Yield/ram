@@ -91,7 +91,10 @@ module.exports = function(deployer, network, accounts) {
     const robotNFT = await nftFactory.deployNFT.call("RAM Robot NFT", "RAMROBOTNFT", "ram.robot");
     await nftFactory.deployNFT("RAM Robot NFT", "RAMROBOTNFT", "ram.robot");
 
-    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT];
+    const linkNFT = await nftFactory.deployNFT.call("RAM LINK NFT", "RAMLINKNFT", "ram.link");
+    await nftFactory.deployNFT("RAM LINK NFT", "RAMLINKNFT", "ram.link");
+
+    const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT, linkNFT];
 
     // Deploy RAMRouter contract
     const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr, dXiotToken.address);

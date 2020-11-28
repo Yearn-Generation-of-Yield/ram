@@ -286,6 +286,12 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     function selfRequestRandomNumber(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(!randomReady, "There is already a random number available");
         require(LINK.transferFrom(msg.sender, address(this), fee), "Not enough LINK approved to contract");
+
+        // Mint a LINK NFT to caller (only if they don't have one yet)
+        if(INFT(_NFTs[7]).balanceOf(msg.sender) == 0) {
+            _NFTFactory.mint(INFT(_NFTs[7]), msg.sender);
+        }
+
         return requestRandomness(keyHash, fee, userProvidedSeed);
     }
 
