@@ -99,7 +99,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         }
 
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
-        fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
+        fee = 2 * 10 ** 18;
     }
 
     function setGovernance(address _governance) public {
