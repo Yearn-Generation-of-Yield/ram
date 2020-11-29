@@ -107,7 +107,7 @@ contract("Governance", accounts => {
         this.RAMRouter.setGovernance(this.governance.address, { from: setterAccount });
 
         // // Initialize RAMVault
-        await this.RAMvault.initialize(this.RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount, { from: setterAccount });
+        await this.RAMvault.initialize(this.RAMToken.address, this.YGYToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount, { from: setterAccount });
     });
 
     it("should be able to set number selection", async () => {
