@@ -135,10 +135,10 @@ contract RAMVault is OwnableUpgradeSafe {
         boostLevelTwoCost = 15 * 1e18;   // 15 RAM tokens
         boostLevelThreeCost = 30 * 1e18; // 30 RAM tokens
         boostLevelFourCost = 60 * 1e18;  // 60 RAM tokens
-        boostLevelOneMultiplier = 5000000000000000000;     // 5%
-        boostLevelTwoMultiplier = 15000000000000000000;    // 15%
-        boostLevelThreeMultiplier = 30000000000000000000;  // 30%
-        boostLevelFourMultiplier = 60000000000000000000;   // 60%
+        boostLevelOneMultiplier = 5;     // 5%
+        boostLevelTwoMultiplier = 15;    // 15%
+        boostLevelThreeMultiplier = 30;  // 30%
+        boostLevelFourMultiplier = 60;   // 60%
     }
 
     // --------------------------------------------
@@ -291,8 +291,7 @@ contract RAMVault is OwnableUpgradeSafe {
                 uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
                 uint256 newBalancesAccounting = user.amount
                     .mul(accTotalMultiplier)
-                    .div(1e18)
-                    .sub(user.amount);
+                    .div(100);
 
                 user.boostAmount = newBalancesAccounting;
 
@@ -333,8 +332,7 @@ contract RAMVault is OwnableUpgradeSafe {
                 uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
                 uint256 newBalancesAccounting = user.amount
                     .mul(accTotalMultiplier)
-                    .div(1e18)
-                    .sub(user.amount);
+                    .div(100);
 
                 user.boostAmount = newBalancesAccounting;
 
@@ -395,8 +393,8 @@ contract RAMVault is OwnableUpgradeSafe {
                 uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
                 uint256 newBalancesAccounting = user.amount
                     .mul(accTotalMultiplier)
-                    .div(1e18)
-                    .sub(user.amount);
+                    .div(100);
+
                 user.boostAmount = newBalancesAccounting;
                 // Subtract the withdrawn amount from the accounting balance
                 // If all tokens are withdrawn the balance will be 0.
@@ -464,7 +462,6 @@ contract RAMVault is OwnableUpgradeSafe {
             // Calculate new accounting  balance
             uint256 newAccountingAmount = user.amount
                 .mul(accTotalMultiplier)
-                .div(1e18)
                 .div(100);
 
            // Get the user's previous accounting balance

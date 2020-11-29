@@ -6,22 +6,21 @@ const RAMVAULT = artifacts.require("RAMVault");
 const Token = artifacts.require("Token");
 const UniV2Pair = artifacts.require("UniswapV2Pair");
 const Governance = artifacts.require("Governance");
-const FeeApprover = artifacts.require('FeeApprover');
-const NFTFactory = artifacts.require('NFTFactory');
+const FeeApprover = artifacts.require("FeeApprover");
+const NFTFactory = artifacts.require("NFTFactory");
 
 module.exports = function(deployer, network, accounts) {
-
   // [KOVAN TESTNET DEPLOYMENT]
-  // let setterAccount = deployer.networks.kovan.from;
-  // let devAccount = "0xB5aC192829C65Fd553bFb0381E1139867A4626FD";
-  // let teamAddr = "0x08F57A4acCfEB2970E0A56270160719A1aa5b4A4";
-  // let rengeneratorAddr = "0x26C9264CB693AB4142ad19d2AB44B272dd1C9691";
+  let setterAccount = accounts[0];
+  let devAccount = "0xB5aC192829C65Fd553bFb0381E1139867A4626FD";
+  let teamAddr = "0x08F57A4acCfEB2970E0A56270160719A1aa5b4A4";
+  let rengeneratorAddr = "0x26C9264CB693AB4142ad19d2AB44B272dd1C9691";
 
   // [LOCAL DEPLOYMENT]
-  let setterAccount = accounts[2];
-  let devAccount = accounts[2];
-  let teamAddr = accounts[3];
-  let rengeneratorAddr = accounts[4];
+  // let setterAccount = accounts[2];
+  // let devAccount = accounts[2];
+  // let teamAddr = accounts[3];
+  // let rengeneratorAddr = accounts[4];
 
   const tenThousand = "10000000000000000000000";
   const fiveThousand = "5000000000000000000000";
@@ -35,7 +34,7 @@ module.exports = function(deployer, network, accounts) {
     const weth = await deployer.deploy(WETH);
 
     // Deposit Ethereum and get WETH tokens
-    await weth.deposit({value: (1e18).toString() });
+    await weth.deposit({ value: (1e18).toString() });
 
     // Deploy a new RAM token which manages Governance for the protocol
     const YGYToken = await deployer.deploy(Token, "YGY", "YGY", tenThousand);
@@ -63,7 +62,7 @@ module.exports = function(deployer, network, accounts) {
 
     // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
     await YGYToken.transfer(YGYWETHPair.address, twoThousand);
-    await weth.transfer(YGYWETHPair.address, (1*1e18).toString());
+    await weth.transfer(YGYWETHPair.address, (1 * 1e18).toString());
     await YGYWETHPair.mint(setterAccount);
 
     await YGYToken.transfer(YGYRAMPair.address, fiveThousand);
@@ -97,7 +96,21 @@ module.exports = function(deployer, network, accounts) {
     const nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT, linkNFT];
 
     // Deploy RAMRouter contract
-    const RAMRouter = await deployer.deploy(UniRAMRouter, RAMToken.address, YGYToken.address, weth.address, uniV2Factory.address, YGYRAMPair.address, YGYWETHPair.address, feeapprover.address, RAMVault.address, nftFactory.address, nftAddrs, rengeneratorAddr, dXiotToken.address);
+    const RAMRouter = await deployer.deploy(
+      UniRAMRouter,
+      RAMToken.address,
+      YGYToken.address,
+      weth.address,
+      uniV2Factory.address,
+      YGYRAMPair.address,
+      YGYWETHPair.address,
+      feeapprover.address,
+      RAMVault.address,
+      nftFactory.address,
+      nftAddrs,
+      rengeneratorAddr,
+      dXiotToken.address
+    );
 
     // Deploy governance contract and set on router
     const governance = await deployer.deploy(Governance, YGYToken.address, RAMRouter.address);
@@ -105,5 +118,5 @@ module.exports = function(deployer, network, accounts) {
 
     // Initialize RAMVault
     await RAMVault.initialize(RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount);
-  })
+  });
 };

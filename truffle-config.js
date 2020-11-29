@@ -1,39 +1,34 @@
-require("dotenv").config();
-var HDWalletProvider = require("@truffle/hdwallet-provider");
-
-const kovanProvider = new HDWalletProvider(process.env.PRIVATE_KEY, "https://kovan.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID));
+var HDWalletProvider = require("truffle-hdwallet-provider");
+const { kovanPrivateKey, kovanProvider, etherscanApiKey } = require("./password");
 
 module.exports = {
   networks: {
     development: {
-      protocol: 'http',
-      host: 'localhost',
+      host: "localhost",
       port: 9545,
-      gas: 5000000,
-      gasPrice: 5e9,
-      network_id: '*',
+      network_id: "*", // Match any network id
+      gas: 8000000,
     },
     kovan: {
-      provider: kovanProvider,
+      provider: function() {
+        return new HDWalletProvider(kovanPrivateKey, kovanProvider);
+      },
       network_id: "42",
-      gasPrice: 100000000000,
+      gasPrice: 10000000000,
       gas: 8200000,
     },
   },
   compilers: {
     solc: {
       version: "0.6.12",
-      docker: false,
-      settings: {
-       optimizer: {
-         enabled: true,
-         runs: 200
-       }
-      }
-    }
+      optimizer: {
+        enabled: true,
+        runs: 555,
+      },
+    },
   },
   plugins: ["truffle-plugin-verify"],
   api_keys: {
-    etherscan: process.env.ETHERSCAN_API_KEY,
+    etherscan: etherscanApiKey,
   },
 };
