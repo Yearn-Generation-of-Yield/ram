@@ -219,7 +219,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         else
             IUniswapV2Pair(_YGYRAMPair).mint(to);
 
-        //refund dust
+        // Refund dust to sender
         if (RAMAmount > optimalRAMAmount)
             IERC20(_RAMToken).transfer(to, RAMAmount.sub(optimalRAMAmount));
 

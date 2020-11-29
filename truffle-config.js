@@ -7,14 +7,14 @@ module.exports = {
       host: "localhost",
       port: 9545,
       network_id: "*", // Match any network id
-      gas: 5000000,
+      gas: 8000000,
     },
     kovan: {
       provider: function() {
         return new HDWalletProvider(kovanPrivateKey, kovanProvider);
       },
       network_id: "42",
-      gasPrice: 20000000000,
+      gasPrice: 10000000000,
       gas: 8200000,
     },
   },
