@@ -252,7 +252,7 @@ contract RAMVault is OwnableUpgradeSafe {
         uint256 accYGYPerShare = pool.accYGYPerShare;
 
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
-        return effectiveAmount.mul(accYGYPerShare).div(1e12).sub(user.rewardDebt);
+        return effectiveAmount.mul(accYGYPerShare).div(1e12);
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
@@ -458,9 +458,13 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     function updateAndPayOutPending(uint256 _pid, address from) internal {
-        uint256 pending = pendingRam(_pid, from);
-        if(pending > 0) {
-            safeRamTransfer(from, pending);
+        uint256 pendingRAM = pendingRam(_pid, from);
+        if(pendingRAM > 0) {
+            safeRamTransfer(from, pendingRAM);
+        }
+        uint256 pendingYGY = pendingYgy(_pid, from);
+        if(pendingYGY > 0) {
+            safeYgyTransfer(from, pendingYGY);
         }
     }
 
@@ -657,12 +661,28 @@ contract RAMVault is OwnableUpgradeSafe {
         }
         //Avoids possible recursion loop
         // proxy?
-        transferDevFee();
-
+        transferRAMDevFee();
     }
 
-    function transferDevFee() public {
-        // RAM rewards
+    // Safe ram transfer function, just in case if rounding error causes pool to not have enough RAMs.
+    function safeYgyTransfer(address _to, uint256 _amount) internal {
+        uint256 ygyBal = ygy.balanceOf(address(this));
+
+        if (_amount > ygyBal) {
+            ygy.transfer(_to, ygyBal);
+            ygyBalance = ygy.balanceOf(address(this));
+
+        } else {
+            ygy.transfer(_to, _amount);
+            ygyBalance = ygy.balanceOf(address(this));
+
+        }
+        //Avoids possible recursion loop
+        // proxy?
+        transferYGYDevFee();
+    }
+
+    function transferRAMDevFee() public {
         if(pending_DEV_rewards > 0) {
             uint256 devDistAmt;
             uint256 teamDistAmt;
@@ -681,8 +701,9 @@ contract RAMVault is OwnableUpgradeSafe {
             ramBalance = ram.balanceOf(address(this));
             pending_DEV_rewards = 0;
         }
+    }
 
-        // YGY rewards
+    function transferYGYDevFee() public {
         if(pending_DEV_YGY_rewards > 0) {
             uint256 devDistAmt;
             uint256 teamDistAmt;
