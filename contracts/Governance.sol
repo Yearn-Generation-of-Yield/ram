@@ -149,7 +149,7 @@ contract Governance {
         } else if (_level == 4) {
             return 24 weeks;
         }
-        return 0;
+        return 2 weeks;
     }
 
     function getMultiplierForLevel(uint256 _level) public pure returns (uint256) {
