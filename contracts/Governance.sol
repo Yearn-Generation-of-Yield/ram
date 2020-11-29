@@ -75,7 +75,7 @@ contract Governance {
         User storage user = users[msg.sender];
 
         // Calculate effective voting power and create new timelock
-        uint256 effectiveAmount =  _amount.mul(getMultiplierForLevel(_level).div(100));
+        uint256 effectiveAmount =  _amount.mul(getMultiplierForLevel(_level)).div(100);
         TimeLock memory timelock = TimeLock({
             multipliedAmount: effectiveAmount,
             level: _level,
@@ -161,7 +161,8 @@ contract Governance {
             return 1000; // 10x
         } else if (_level == 4) {
             return 2500; // 25x
+        } else {
+            return 150;
         }
-        return 0;
     }
 }
