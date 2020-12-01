@@ -37,10 +37,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint public constant SCALE = 100;
     uint public constant SCALIFIER = MAX / SCALE;
     uint public constant OFFSET = 1;
-    bytes32 internal keyHash;
-    uint256 internal fee;
     bool public randomReady;
     uint256 public randomResult;
+    uint256 public rngLinkFee;
+    bytes32 internal keyHash;
 
     // Lottery tracking
     struct LotteryTicket {
@@ -98,8 +98,9 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             _NFTs[i+1] = nfts[i];
         }
 
+        // TODO: Update to mainnet variables
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
-        fee = 0.1 * 10 ** 18; // 0.1 LINK // TODO: Update LINK fee for mainnet
+        rngLinkFee = 0.1 * 10 ** 18;
     }
 
     function setGovernance(address _governance) public {
@@ -191,7 +192,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         generateLotteryTickets(to);
 
-        // sync();
+        sync();
     }
 
    // _addLiquidity sends RAM, YGY tokens to the _YGYRAMPair contract and mints _YGYRAMPair LP tokens.
@@ -252,7 +253,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
     // Function sync fee approver
     function sync() public {
-        _feeApprover.updateTxState();
+        _feeApprover.sync();
     }
 
     // sets fee approver in case fee approver gets chaned.
@@ -276,8 +277,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
      */
     function getRandomNumber(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(!randomReady, "There is already a random number available");
-        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK on contract");
-        return requestRandomness(keyHash, fee, userProvidedSeed);
+        require(LINK.balanceOf(address(this)) >= rngLinkFee, "Not enough LINK on contract");
+        return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
     /**
@@ -285,14 +286,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
      */
     function selfRequestRandomNumber(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(!randomReady, "There is already a random number available");
-        require(LINK.transferFrom(msg.sender, address(this), fee), "Not enough LINK approved to contract");
+        require(LINK.transferFrom(msg.sender, address(this), rngLinkFee), "Not enough LINK approved to contract");
 
         // Mint a LINK NFT to caller (only if they don't have one yet)
         if(INFT(_NFTs[7]).balanceOf(msg.sender) == 0) {
             _NFTFactory.mint(INFT(_NFTs[7]), msg.sender);
         }
 
-        return requestRandomness(keyHash, fee, userProvidedSeed);
+        return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
     /**
@@ -452,5 +453,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             }
         }
         lastTicketLevel[user] = newLevel;
+    }
+
+    // Chainlink VRF mainnet functionality will change in the future: dynamic pricing
+    function updateRngLinkFee(uint256 _rngLinkFee) public onlyOwner {
+        rngLinkFee = _rngLinkFee;
+    }
+
+    function updateKeyHash(bytes32 _keyHash) public onlyOwner {
+        keyHash = _keyHash;
     }
 }

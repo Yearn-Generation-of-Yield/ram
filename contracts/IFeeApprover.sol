@@ -18,7 +18,7 @@ interface IFeeApprover {
 
     function setRamTokenAddress(address _ramTokenAddress) external;
     function setYgyTokenAddress(address _ygyTokenAddress) external;
-    function updateTxState() external;
+    function sync() external returns (bool lastIsMint, bool lpTokenBurn);
     function calculateAmountsAfterFee(
         address sender,
         address recipient,
