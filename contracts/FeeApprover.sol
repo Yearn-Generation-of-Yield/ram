@@ -106,7 +106,7 @@ contract FeeApprover is OwnableUpgradeSafe {
             }
 
             if(noFeeList[sender]) { // Dont have a fee when ramvault is sending, or infinite loop
-                console.log("Sending without fee");                       // And when pair is sending ( buys are happening, no tax on it)
+                console.log("Sending without fee"); // And when pair is sending ( buys are happening, no tax on it)
                 transferToFeeDistributorAmount = 0;
                 transferToAmount = amount;
             }
