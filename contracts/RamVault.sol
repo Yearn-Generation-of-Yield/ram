@@ -121,7 +121,6 @@ contract RAMVault is OwnableUpgradeSafe {
         regeneratoraddr = _regeneratoraddr;
         contractStartBlock = block.number;
         _superAdmin = superAdmin;
-        console.log("CONSTURRCTOR", address(ram));
 
         // Initial boost multipliers and costs
         boostLevelOneCost = 5 * 1e18;    // 5 RAM tokens
