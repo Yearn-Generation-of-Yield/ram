@@ -62,6 +62,7 @@ contract RAMVault is OwnableUpgradeSafe {
     // pending rewards awaiting anyone to massUpdate
     uint256 public pendingRewards;
     uint256 public pendingYGYRewards;
+    uint256 public YGYReserve;
 
     // Reward token balance-keeping
     uint256 private ramBalance;
@@ -185,8 +186,7 @@ contract RAMVault is OwnableUpgradeSafe {
     function addYGYRewardsOwner(uint256 _amount) public onlyOwner {
         require(ygy.transferFrom(msg.sender, address(this), _amount), "Approve tokens first");
         if(_amount > 0) {
-            pendingYGYRewards = pendingYGYRewards.add(_amount);
-            YGYRewardsInThisEpoch = YGYRewardsInThisEpoch.add(_amount);
+            YGYReserve = YGYReserve.add(_amount);
         }
     }
 
@@ -294,6 +294,11 @@ contract RAMVault is OwnableUpgradeSafe {
         require(msg.sender == address(ram), "Only RAM token can add rewards");
         pendingRewards = pendingRewards.add(_amount);
         rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+
+        if (YGYReserve > _amount) {
+            pendingYGYRewards = pendingRewards.add(_amount);
+            YGYRewardsInThisEpoch = YGYRewardsInThisEpoch.add(_amount);
+        }
     }
 
     // Update reward variables of the given pool to be up-to-date.
@@ -465,7 +470,7 @@ contract RAMVault is OwnableUpgradeSafe {
 
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
         user.rewardDebt = effectiveAmount.mul(pool.accRAMPerShare).div(1e12);
-        user.rewardDebtYGY = effectiveAmount.mul(pool.accRAMPerShare).div(1e12);
+        user.rewardDebtYGY = effectiveAmount.mul(pool.accYGYPerShare).div(1e12);
         emit Withdraw(to, _pid, _amount);
     }
 

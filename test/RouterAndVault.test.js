@@ -250,6 +250,10 @@ contract("UniRAMRouter", (accounts) => {
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
+    // Add ygy
+    const YGYrewards = web3.utils.toWei("100");
+    await this.YGYToken.approve(this.RAMvault.address, YGYrewards, { from: setterAccount });
+    await this.RAMvault.addYGYRewardsOwner(YGYrewards, { from: setterAccount });
 
     // Approve and deposit user 2
     // await this.YGYRAMPair.approve(this.RAMvault313.address, (5 * 1e17).toString(), { from: testAccount2 });
@@ -282,11 +286,6 @@ contract("UniRAMRouter", (accounts) => {
     await this.RAMToken.transfer(setterAccount, (4.5e18).toString(), { from: testAccount });
     await this.RAMToken.transfer(testAccount, (3e18).toString(), { from: setterAccount });
 
-    // Add ygy
-    const YGYrewards = web3.utils.toWei("100");
-    await this.YGYToken.approve(this.RAMvault.address, YGYrewards, { from: setterAccount });
-    await this.RAMvault.addYGYRewardsOwner(YGYrewards, { from: setterAccount });
-
     // Advance time forward a half a month, then mass updaet
     const halfMonthInSeconds = 2419200 / 2;
 
@@ -298,9 +297,9 @@ contract("UniRAMRouter", (accounts) => {
 
     // Get pending rewards at this point
     const pendingRamHalfMonth = Number(pendingRewardsHalfTime.pendingRAM);
-    // const pendingYgyHalfMonth = Number(pendingRewardsHalfTime.pendingYGY);
+    const pendingYgyHalfMonth = Number(pendingRewardsHalfTime.pendingYGY);
     const pendingRamHalfMonthUser2 = Number(pendingRewardsHalfTime2.pendingRAM);
-    // const pendingYgyHalfMonthUser2 = Number(pendingRewardsHalfTime2.pendingYGY);
+    const pendingYgyHalfMonthUser2 = Number(pendingRewardsHalfTime2.pendingYGY);
 
     // Has rewards available
     assert.isTrue(pendingRamHalfMonth > 0);
@@ -319,11 +318,11 @@ contract("UniRAMRouter", (accounts) => {
 
     const pendingRamFullMonth = Number(pendingRewardsFullMonth.pendingRAM);
     const pendingRamFullMonthUser2 = Number(pendingRewardsFullMonthUser2.pendingRAM);
-    // const pendingYgyFullMonth = Number(pendingRewardsFullMonth.pendingYGY);
+    const pendingYgyFullMonth = Number(pendingRewardsFullMonth.pendingYGY);
 
     assert.isTrue(pendingRamFullMonth > pendingRamHalfMonth);
     assert.isTrue(pendingRamFullMonthUser2 > pendingRamHalfMonthUser2);
-    // assert.isTrue(pendingYgyFullMonth > pendingYgyHalfMonth); // * NAH
+    assert.isTrue(pendingYgyFullMonth > pendingYgyHalfMonth); // * NAH
 
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount3 }));
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount2 }));
