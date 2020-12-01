@@ -111,7 +111,7 @@ module.exports = function(deployer, network, accounts) {
     await RAMRouter.setGovernance(governance.address);
 
     // Initialize RAMVault
-    await RAMVault.initialize(RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount);
+    await RAMVault.initialize(RAMToken.address, YGYToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount);
 
     // Add a pool
     RAMVault.add(100, YGYRAMPair.address, true, true);

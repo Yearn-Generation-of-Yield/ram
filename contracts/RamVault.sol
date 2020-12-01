@@ -10,7 +10,6 @@ import "./INBUNIERC20.sol";
 import "@nomiclabs/buidler/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
-// Have fun reading it. Hopefully it's bug-free. God bless.
 contract RAMVault is OwnableUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -41,13 +40,14 @@ contract RAMVault is OwnableUpgradeSafe {
         IERC20 token; // Address of  token contract.
         uint256 allocPoint; // How many allocation points assigned to this pool. RAMs to distribute per block.
         uint256 accRAMPerShare; // Accumulated RAMs per share, times 1e12. See below.
+        uint256 accYGYPerShare; // Accumulated YGYs per share, times 1e12. See below.
         bool withdrawable; // Is this pool withdrawable?
         mapping(address => mapping(address => uint256)) allowance;
         uint256 effectiveAdditionalTokensFromBoosts; // Track the total additional accounting staked tokens from boosts.
     }
 
-    // The RAM TOKEN!
-    INBUNIERC20 public ram;
+    INBUNIERC20 public ram; // The RAM token
+    IERC20 public ygy;  // The YGY token
     // Dev address.
     address public devaddr;
 
@@ -60,11 +60,13 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // pending rewards awaiting anyone to massUpdate
     uint256 public pendingRewards;
+    uint256 public pendingYGYRewards;
 
     uint256 public contractStartBlock;
     uint256 public epochCalculationStartBlock;
     uint256 public cumulativeRewardsSinceStart;
     uint256 public rewardsInThisEpoch;
+
     uint public epoch;
 
     // Boosts
@@ -104,6 +106,22 @@ contract RAMVault is OwnableUpgradeSafe {
         ++epoch;
     }
 
+    function addRAMRewardsOwner(uint256 _amount) public onlyOwner {
+        require(ram.transferFrom(msg.sender, address(this), _amount), "Approve tokens first");
+        if(_amount > 0) {
+            pendingRewards = pendingRewards.add(_amount);
+            rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+        }
+    }
+
+    uint256 private ygyBalance;
+    function addYGYRewardsOwner(uint256 _amount) public onlyOwner {
+        require(ygy.transferFrom(msg.sender, address(this), _amount), "Approve tokens first");
+        if(_amount > 0) {
+            pendingYGYRewards = pendingYGYRewards.add(_amount);
+        }
+    }
+
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(
@@ -116,6 +134,7 @@ contract RAMVault is OwnableUpgradeSafe {
 
     function initialize(
         address _ram,
+        address _ygy,
         address _devaddr,
         address _teamaddr,
         address _regeneratoraddr,
@@ -124,6 +143,7 @@ contract RAMVault is OwnableUpgradeSafe {
         OwnableUpgradeSafe.__Ownable_init();
         DEV_FEE = 724;
         ram = INBUNIERC20(_ram);
+        ygy = IERC20(_ygy);
         devaddr = _devaddr;
         teamaddr = _teamaddr;
         regeneratoraddr = _regeneratoraddr;
@@ -173,6 +193,7 @@ contract RAMVault is OwnableUpgradeSafe {
                 token: _token,
                 allocPoint: _allocPoint,
                 accRAMPerShare: 0,
+                accYGYPerShare: 0,
                 withdrawable : _withdrawable,
                 effectiveAdditionalTokensFromBoosts: 0
             })
@@ -220,16 +241,34 @@ contract RAMVault is OwnableUpgradeSafe {
         return effectiveAmount.mul(accRAMPerShare).div(1e12).sub(user.rewardDebt);
     }
 
+    // View function to see pending YGYs on frontend.
+    function pendingYgy(uint256 _pid, address _user)
+        public
+        view
+        returns (uint256)
+    {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_user];
+        uint256 accYGYPerShare = pool.accYGYPerShare;
+
+        uint256 effectiveAmount = user.amount.add(user.boostAmount);
+        return effectiveAmount.mul(accYGYPerShare).div(1e12);
+    }
+
     // Update reward vairables for all pools. Be careful of gas spending!
     function massUpdatePools() public {
         console.log("Mass Updating Pools");
         uint256 length = poolInfo.length;
         uint allRewards;
+        uint allYGYRewards;
         for (uint256 pid = 0; pid < length; ++pid) {
-            allRewards = allRewards.add(updatePool(pid));
+            (uint256 ramWholeReward, uint256 ygyWholeReward) = updatePool(pid);
+            allRewards = allRewards.add(ramWholeReward);
+            allYGYRewards = allYGYRewards.add(ygyWholeReward);
         }
 
         pendingRewards = pendingRewards.sub(allRewards);
+        pendingYGYRewards = pendingYGYRewards.sub(allYGYRewards);
     }
 
     // ----
@@ -248,25 +287,35 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 _pid) internal returns (uint256 ramRewardWhole) {
+    function updatePool(uint256 _pid) internal returns (uint256 ramRewardWhole, uint256 ygyRewardWhole) {
         PoolInfo storage pool = poolInfo[_pid];
 
         uint256 tokenSupply = pool.token.balanceOf(address(this));
         if (tokenSupply == 0) { // avoids division by 0 errors
-            return 0;
+            return (0, 0);
         }
+
+        // Calculate ram reward to distribute
         ramRewardWhole = pendingRewards // Multiplies pending rewards by allocation point of this pool and then total allocation
             .mul(pool.allocPoint)        // getting the percent of total pending rewards this pool should get
             .div(totalAllocPoint);       // we can do this because pools are only mass updated
         uint256 ramRewardFee = ramRewardWhole.mul(DEV_FEE).div(10000);
         uint256 ramRewardToDistribute = ramRewardWhole.sub(ramRewardFee);
-
         pending_DEV_rewards = pending_DEV_rewards.add(ramRewardFee);
+
+        // Calculate ygy reward to distribute
+        ygyRewardWhole = pendingYGYRewards
+            .mul(pool.allocPoint)
+            .div(totalAllocPoint);
+        uint256 ygyRewardFee = ygyRewardWhole.mul(DEV_FEE).div(10000);
+        uint256 ygyRewardToDistribute = ygyRewardWhole.sub(ygyRewardFee);
+        pending_DEV_YGY_rewards = pending_DEV_YGY_rewards.add(ygyRewardFee);
 
         // Add pool's effective additional token amount from boosts
         uint256 effectivePoolStakedSupply = tokenSupply.add(pool.effectiveAdditionalTokensFromBoosts);
-        // Calculate RAMPerShare using effective pool staked supply (not just total supply)
+        // Calculate RAMPerShare, accYGYPerShare using effective pool staked supply (not just total supply)
         pool.accRAMPerShare = pool.accRAMPerShare.add(ramRewardToDistribute.mul(1e12).div(effectivePoolStakedSupply));
+        pool.accYGYPerShare = pool.accYGYPerShare.add(ygyRewardToDistribute.mul(1e12).div(effectivePoolStakedSupply));
     }
 
     // Deposit  tokens to RamVault for RAM allocation.
@@ -409,9 +458,13 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     function updateAndPayOutPending(uint256 _pid, address from) internal {
-        uint256 pending = pendingRam(_pid, from);
-        if(pending > 0) {
-            safeRamTransfer(from, pending);
+        uint256 pendingRAM = pendingRam(_pid, from);
+        if(pendingRAM > 0) {
+            safeRamTransfer(from, pendingRAM);
+        }
+        uint256 pendingYGY = pendingYgy(_pid, from);
+        if(pendingYGY > 0) {
+            safeYgyTransfer(from, pendingYGY);
         }
     }
 
@@ -518,7 +571,7 @@ contract RAMVault is OwnableUpgradeSafe {
         return user.spentMultiplierTokens;
     }
 
-    // Distributes fees to devs and protocol
+    // Distributes boost fees to devs and protocol
     function distributeFees() public {
         // Reset taxes to 0 before distributing any funds
         uint256 totalBoostDistAmt = boostFees;
@@ -574,7 +627,7 @@ contract RAMVault is OwnableUpgradeSafe {
         DEV_FEE = _DEV_FEE;
     }
     uint256 pending_DEV_rewards;
-
+    uint256 pending_DEV_YGY_rewards;
 
     // function that lets owner/governance contract
     // approve allowance for any token inside this contract
@@ -608,29 +661,67 @@ contract RAMVault is OwnableUpgradeSafe {
         }
         //Avoids possible recursion loop
         // proxy?
-        transferDevFee();
-
+        transferRAMDevFee();
     }
 
-    function transferDevFee() public {
-        if(pending_DEV_rewards == 0) return;
+    // Safe ram transfer function, just in case if rounding error causes pool to not have enough RAMs.
+    function safeYgyTransfer(address _to, uint256 _amount) internal {
+        uint256 ygyBal = ygy.balanceOf(address(this));
 
-        uint256 devDistAmt;
-        uint256 teamDistAmt;
-        uint256 ramBal = ram.balanceOf(address(this));
-        if (pending_DEV_rewards > ramBal) {
-            devDistAmt = ramBal.mul(70).div(100);
-            teamDistAmt = ramBal.mul(30).div(100);
+        if (_amount > ygyBal) {
+            ygy.transfer(_to, ygyBal);
+            ygyBalance = ygy.balanceOf(address(this));
+
         } else {
-            devDistAmt = pending_DEV_rewards.mul(70).div(100);
-            teamDistAmt = pending_DEV_rewards.mul(30).div(100);
+            ygy.transfer(_to, _amount);
+            ygyBalance = ygy.balanceOf(address(this));
+
         }
+        //Avoids possible recursion loop
+        // proxy?
+        transferYGYDevFee();
+    }
 
-        if (devDistAmt > 0) { ram.transfer(devaddr, devDistAmt); }
-        if (teamDistAmt > 0) { ram.transfer(teamaddr, teamDistAmt);}
+    function transferRAMDevFee() public {
+        if(pending_DEV_rewards > 0) {
+            uint256 devDistAmt;
+            uint256 teamDistAmt;
+            uint256 ramBal = ram.balanceOf(address(this));
+            if (pending_DEV_rewards > ramBal) {
+                devDistAmt = ramBal.mul(70).div(100);
+                teamDistAmt = ramBal.mul(30).div(100);
+            } else {
+                devDistAmt = pending_DEV_rewards.mul(70).div(100);
+                teamDistAmt = pending_DEV_rewards.mul(30).div(100);
+            }
 
-        ramBalance = ram.balanceOf(address(this));
-        pending_DEV_rewards = 0;
+            if (devDistAmt > 0) { ram.transfer(devaddr, devDistAmt); }
+            if (teamDistAmt > 0) { ram.transfer(teamaddr, teamDistAmt);}
+
+            ramBalance = ram.balanceOf(address(this));
+            pending_DEV_rewards = 0;
+        }
+    }
+
+    function transferYGYDevFee() public {
+        if(pending_DEV_YGY_rewards > 0) {
+            uint256 devDistAmt;
+            uint256 teamDistAmt;
+            uint256 ygyBal = ygy.balanceOf(address(this));
+            if (pending_DEV_YGY_rewards > ygyBal) {
+                devDistAmt = ygyBal.mul(70).div(100);
+                teamDistAmt = ygyBal.mul(30).div(100);
+            } else {
+                devDistAmt = pending_DEV_YGY_rewards.mul(70).div(100);
+                teamDistAmt = pending_DEV_YGY_rewards.mul(30).div(100);
+            }
+
+            if (devDistAmt > 0) { ygy.transfer(devaddr, devDistAmt); }
+            if (teamDistAmt > 0) { ygy.transfer(teamaddr, teamDistAmt);}
+
+            ygyBalance = ygy.balanceOf(address(this));
+            pending_DEV_YGY_rewards = 0;
+        }
     }
 
     // Update dev address by the previous dev.
