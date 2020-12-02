@@ -73,7 +73,6 @@ contract RAMVault is OwnableUpgradeSafe {
     uint256 public cumulativeRewardsSinceStart;
     uint256 public cumulativeYGYRewardsSinceStart;
     uint256 public rewardsInThisEpoch;
-    uint256 public YGYRewardsInThisEpoch;
 
     uint256 public epoch;
 
@@ -87,7 +86,6 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // For easy graphing historical epoch rewards
     mapping(uint256 => uint256) public epochRewards;
-    mapping(uint256 => uint256) public epochYGYRewards;
 
     event RewardPaid(uint256 pid, address to);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -148,17 +146,11 @@ contract RAMVault is OwnableUpgradeSafe {
         require(epochCalculationStartBlock + 50000 < block.number);
 
         epochRewards[epoch] = rewardsInThisEpoch;
-        epochYGYRewards[epoch] = YGYRewardsInThisEpoch;
-
         cumulativeRewardsSinceStart = cumulativeRewardsSinceStart.add(
             rewardsInThisEpoch
         );
-        cumulativeYGYRewardsSinceStart = cumulativeYGYRewardsSinceStart.add(
-            YGYRewardsInThisEpoch
-        );
 
         rewardsInThisEpoch = 0;
-        YGYRewardsInThisEpoch = 0;
 
         epochCalculationStartBlock = block.number;
         ++epoch;
@@ -168,29 +160,24 @@ contract RAMVault is OwnableUpgradeSafe {
     function averageFeesPerBlockSinceStart()
         external
         view
-        returns (uint256 averagePerBlock, uint256 averageYGYPerBlock)
+        returns (uint256 averagePerBlock)
     {
-        return (
+        return
             cumulativeRewardsSinceStart.add(rewardsInThisEpoch).div(
                 block.number.sub(contractStartBlock)
-            ),
-            cumulativeYGYRewardsSinceStart.add(YGYRewardsInThisEpoch).div(
-                block.number.sub(contractStartBlock)
-            )
-        );
+            );
     }
 
     // Returns averge fees in this epoch
     function averageFeesPerBlockEpoch()
         external
         view
-        returns (uint256 averagePerBlock, uint256 averageYGYPerBlock)
+        returns (uint256 averagePerBlock)
     {
-        uint256 reduceAmount = block.number.sub(epochCalculationStartBlock);
-        return (
-            rewardsInThisEpoch.div(reduceAmount),
-            YGYRewardsInThisEpoch.div(reduceAmount)
-        );
+        return
+            rewardsInThisEpoch.div(
+                block.number.sub(epochCalculationStartBlock)
+            );
     }
 
     // --------------------------------------------
@@ -313,9 +300,10 @@ contract RAMVault is OwnableUpgradeSafe {
         pendingRewards = pendingRewards.add(_amount);
         rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
 
-        if (YGYReserve >= _amount) {
+        if (YGYReserve > _amount) {
             pendingYGYRewards = pendingYGYRewards.add(_amount);
-            YGYRewardsInThisEpoch = YGYRewardsInThisEpoch.add(_amount);
+        } else {
+            pendingYGYRewards = pendingYGYRewards.add(YGYReserve);
         }
     }
 

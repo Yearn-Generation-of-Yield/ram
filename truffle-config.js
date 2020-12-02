@@ -22,7 +22,7 @@ module.exports = {
       version: "0.6.12",
       optimizer: {
         enabled: true,
-        runs: 555,
+        runs: 200,
       },
     },
   },
