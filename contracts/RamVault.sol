@@ -295,7 +295,7 @@ contract RAMVault is OwnableUpgradeSafe {
         pendingRewards = pendingRewards.add(_amount);
         rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
 
-        if (YGYReserve > _amount) {
+        if (YGYReserve >= _amount) {
             pendingYGYRewards = pendingRewards.add(_amount);
             YGYRewardsInThisEpoch = YGYRewardsInThisEpoch.add(_amount);
         }
@@ -480,7 +480,7 @@ contract RAMVault is OwnableUpgradeSafe {
         if(pendingRAM > 0) {
             safeRamTransfer(_from, pendingRAM);
         }
-        if(pendingYGY > 0) {
+        if(pendingYGY > 0 && ygy.balanceOf(address(this)) > pendingYGY) {
             safeYgyTransfer(_from, pendingYGY);
         }
     }
