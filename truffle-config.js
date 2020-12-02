@@ -13,8 +13,8 @@ module.exports = {
         return new HDWalletProvider(kovanPrivateKey, kovanProvider);
       },
       network_id: "42",
-      gasPrice: 28000000000,
-      gas: 8500000,
+      gasPrice: 20000000000,
+      gas: 6500000,
     },
   },
   compilers: {

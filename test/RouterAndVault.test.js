@@ -372,9 +372,6 @@ contract("UniRAMRouter", (accounts) => {
       ["Dev YGY balance:", ygyDevBalance],
       ["Dev RAM balance", ramDevBalance],
     ]);
-
-    const pinfo = await this.RAMvault.poolInfo;
-    console.log(pinfo.length);
   });
 
   //  NOTE:

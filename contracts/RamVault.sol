@@ -81,8 +81,9 @@ contract RAMVault is OwnableUpgradeSafe {
     address public regeneratoraddr;
     address public teamaddr;
     uint256 public boostFees;
-    mapping(uint256 => uint256) boostLevelCosts;
-    mapping(uint256 => uint256) boostLevelMultipliers;
+
+    mapping(uint256 => uint256) public boostLevelCosts;
+    mapping(uint256 => uint256) public boostLevelMultipliers;
 
     // For easy graphing historical epoch rewards
     mapping(uint256 => uint256) public epochRewards;
@@ -195,6 +196,10 @@ contract RAMVault is OwnableUpgradeSafe {
     // --------------------------------------------
     //                OWNER
     // --------------------------------------------
+
+    function poolLength() external view returns (uint256) {
+        return poolInfo.length;
+    }
 
     // Adds additional RAM rewards
     function addRAMRewardsOwner(uint256 _amount) public onlyOwner {
