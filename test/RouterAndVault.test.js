@@ -238,7 +238,7 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(afterBalVault < belowBalVault);
   });
 
-  it.only("RAM vault: claims rewards, distributes ygy", async () => {
+  it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount }));
 
@@ -323,6 +323,10 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(pendingRamFullMonth > pendingRamHalfMonth);
     assert.isTrue(pendingRamFullMonthUser2 > pendingRamHalfMonthUser2);
     assert.isTrue(pendingYgyFullMonth > pendingYgyHalfMonth); // * NAH
+    const DevFund = Number(await this.RAMvault.pending_DEV_rewards());
+    const YGYDevFund = Number(await this.RAMvault.pending_DEV_YGY_rewards());
+    assert.isTrue(DevFund > 0);
+    assert.isTrue(YGYDevFund > 0);
 
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount3 }));
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount2 }));
@@ -352,9 +356,26 @@ contract("UniRAMRouter", (accounts) => {
     ]);
     assert.isTrue(afterBalRamUser > beforeRamBalUser);
     assert.isTrue(afterBalRamUser2 > beforeRamBalUser2);
-    // assert.isTrue(afterBalRamYgyUser > beforeBalYgyUser);
-    // assert.isTrue(afterBalYgyVault < beforeBalYgyVault);
+    assert.isTrue(afterBalRamYgyUser > beforeBalYgyUser);
     assert.isTrue(afterBalRamVault < beforeBalRamVault);
+
+    const [ygyTeamBalance, ygyDevBalance, ramTeamBalance, ramDevBalance] = await Promise.all([
+      Number(await this.YGYToken.balanceOf(teamAddr)),
+      Number(await this.YGYToken.balanceOf(devAccount)),
+      Number(await this.RAMToken.balanceOf(teamAddr)),
+      Number(await this.RAMToken.balanceOf(teamAddr)),
+    ]);
+
+    assert.isTrue(ygyTeamBalance > 0);
+    assert.isTrue(ygyDevBalance > 0);
+    assert.isTrue(ramTeamBalance > 0);
+    assert.isTrue(ramDevBalance > 0);
+    console.table([
+      ["Team YGY balance:", ygyTeamBalance],
+      ["Team RAM balance", ramTeamBalance],
+      ["Dev YGY balance:", ygyDevBalance],
+      ["Dev RAM balance", ramDevBalance],
+    ]);
   });
 
   //  NOTE:

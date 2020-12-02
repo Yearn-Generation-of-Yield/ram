@@ -480,7 +480,7 @@ contract RAMVault is OwnableUpgradeSafe {
         if(pendingRAM > 0) {
             safeRamTransfer(_from, pendingRAM);
         }
-        if(pendingYGY > 0 && ygy.balanceOf(address(this)) > pendingYGY) {
+        if(pendingYGY > 0) {
             safeYgyTransfer(_from, pendingYGY);
         }
     }
@@ -644,8 +644,9 @@ contract RAMVault is OwnableUpgradeSafe {
         require(_DEV_FEE <= 1000, 'Dev fee clamped at 10%');
         DEV_FEE = _DEV_FEE;
     }
-    uint256 pending_DEV_rewards;
-    uint256 pending_DEV_YGY_rewards;
+
+    uint256 public pending_DEV_rewards;
+    uint256 public pending_DEV_YGY_rewards;
 
     // function that lets owner/governance contract
     // approve allowance for any token inside this contract
