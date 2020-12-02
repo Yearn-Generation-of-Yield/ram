@@ -56,6 +56,7 @@ module.exports = function(deployer, network, accounts) {
     // Deploy RAMvault to manage yield farms
     const RAMVault = await deployer.deploy(RAMVAULT);
 
+    await RAMVault.initialize(RAMToken.address, YGYToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount);
     // Sets transferCheckerAddress() to setter account
     await RAMToken.setShouldTransferChecker(feeapprover.address);
     await RAMToken.setFeeDistributor(RAMVault.address);
@@ -117,6 +118,6 @@ module.exports = function(deployer, network, accounts) {
     await RAMRouter.setGovernance(governance.address);
 
     // Initialize RAMVault
-    await RAMVault.initialize(RAMToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount);
+    await RAMVault.add(100, YGYRAMPair.address, true);
   });
 };
