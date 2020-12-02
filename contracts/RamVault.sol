@@ -48,7 +48,7 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     INBUNIERC20 public ram; // The RAM token
-    IERC20 public ygy;  // The YGY token
+    IERC20 public ygy; // The YGY token
     // Dev address.
     address public devaddr;
 
@@ -75,24 +75,18 @@ contract RAMVault is OwnableUpgradeSafe {
     uint256 public rewardsInThisEpoch;
     uint256 public YGYRewardsInThisEpoch;
 
-    uint public epoch;
+    uint256 public epoch;
 
     // Boosts
     address public regeneratoraddr;
     address public teamaddr;
     uint256 public boostFees;
-    uint256 public boostLevelOneCost;
-    uint256 public boostLevelTwoCost;
-    uint256 public boostLevelThreeCost;
-    uint256 public boostLevelFourCost;
-    uint256 public boostLevelOneMultiplier;
-    uint256 public boostLevelTwoMultiplier;
-    uint256 public boostLevelThreeMultiplier;
-    uint256 public boostLevelFourMultiplier;
+    mapping(uint256 => uint256) boostLevelCosts;
+    mapping(uint256 => uint256) boostLevelMultipliers;
 
     // For easy graphing historical epoch rewards
-    mapping(uint => uint256) public epochRewards;
-    mapping(uint => uint256) public epochYGYRewards;
+    mapping(uint256 => uint256) public epochRewards;
+    mapping(uint256 => uint256) public epochYGYRewards;
 
     event RewardPaid(uint256 pid, address to);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -102,8 +96,17 @@ contract RAMVault is OwnableUpgradeSafe {
         uint256 indexed pid,
         uint256 amount
     );
-    event Approval(address indexed owner, address indexed spender, uint256 _pid, uint256 value);
-    event Boost(address indexed user, uint256 indexed pid, uint256 indexed level);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 _pid,
+        uint256 value
+    );
+    event Boost(
+        address indexed user,
+        uint256 indexed pid,
+        uint256 indexed level
+    );
 
     function initialize(
         address _ram,
@@ -124,14 +127,14 @@ contract RAMVault is OwnableUpgradeSafe {
         _superAdmin = superAdmin;
 
         // Initial boost multipliers and costs
-        boostLevelOneCost = 5 * 1e18;    // 5 RAM tokens
-        boostLevelTwoCost = 15 * 1e18;   // 15 RAM tokens
-        boostLevelThreeCost = 30 * 1e18; // 30 RAM tokens
-        boostLevelFourCost = 60 * 1e18;  // 60 RAM tokens
-        boostLevelOneMultiplier = 5;     // 5%
-        boostLevelTwoMultiplier = 15;    // 15%
-        boostLevelThreeMultiplier = 30;  // 30%
-        boostLevelFourMultiplier = 60;   // 60%
+        boostLevelCosts[1] = 5 * 1e18; // 5 RAM tokens
+        boostLevelCosts[2] = 15 * 1e18; // 15 RAM tokens
+        boostLevelCosts[3] = 30 * 1e18; // 30 RAM tokens
+        boostLevelCosts[4] = 60 * 1e18; // 60 RAM tokens
+        boostLevelMultipliers[1] = 5; // 5%
+        boostLevelMultipliers[2] = 15; // 15%
+        boostLevelMultipliers[3] = 30; // 30%
+        boostLevelMultipliers[4] = 60; // 60%
     }
 
     // --------------------------------------------
@@ -141,13 +144,17 @@ contract RAMVault is OwnableUpgradeSafe {
     // Starts a new calculation epoch
     // Because averge since start will not be accurate
     function startNewEpoch() public {
-        require(epochCalculationStartBlock + 50000 < block.number, "New epoch not ready yet"); // About a week
+        require(epochCalculationStartBlock + 50000 < block.number);
 
         epochRewards[epoch] = rewardsInThisEpoch;
         epochYGYRewards[epoch] = YGYRewardsInThisEpoch;
 
-        cumulativeRewardsSinceStart = cumulativeRewardsSinceStart.add(rewardsInThisEpoch);
-        cumulativeYGYRewardsSinceStart = cumulativeYGYRewardsSinceStart.add(YGYRewardsInThisEpoch);
+        cumulativeRewardsSinceStart = cumulativeRewardsSinceStart.add(
+            rewardsInThisEpoch
+        );
+        cumulativeYGYRewardsSinceStart = cumulativeYGYRewardsSinceStart.add(
+            YGYRewardsInThisEpoch
+        );
 
         rewardsInThisEpoch = 0;
         YGYRewardsInThisEpoch = 0;
@@ -157,17 +164,32 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     // Returns fees generated since start of this contract
-    function averageFeesPerBlockSinceStart() external view returns (uint averagePerBlock, uint averageYGYPerBlock) {
-        uint256 avgPerBlock = cumulativeRewardsSinceStart.add(rewardsInThisEpoch).div(block.number.sub(contractStartBlock));
-        uint256 avgYGYPerBlock = cumulativeYGYRewardsSinceStart.add(YGYRewardsInThisEpoch).div(block.number.sub(contractStartBlock));
-        return (avgPerBlock, avgYGYPerBlock);
+    function averageFeesPerBlockSinceStart()
+        external
+        view
+        returns (uint256 averagePerBlock, uint256 averageYGYPerBlock)
+    {
+        return (
+            cumulativeRewardsSinceStart.add(rewardsInThisEpoch).div(
+                block.number.sub(contractStartBlock)
+            ),
+            cumulativeYGYRewardsSinceStart.add(YGYRewardsInThisEpoch).div(
+                block.number.sub(contractStartBlock)
+            )
+        );
     }
 
     // Returns averge fees in this epoch
-    function averageFeesPerBlockEpoch() external view returns (uint256 averagePerBlock, uint averageYGYPerBlock) {
-        uint256 avgPerBlock = rewardsInThisEpoch.div(block.number.sub(epochCalculationStartBlock));
-        uint256 avgYGYPerBlock = YGYRewardsInThisEpoch.div(block.number.sub(epochCalculationStartBlock));
-        return (avgPerBlock, avgYGYPerBlock);
+    function averageFeesPerBlockEpoch()
+        external
+        view
+        returns (uint256 averagePerBlock, uint256 averageYGYPerBlock)
+    {
+        uint256 reduceAmount = block.number.sub(epochCalculationStartBlock);
+        return (
+            rewardsInThisEpoch.div(reduceAmount),
+            YGYRewardsInThisEpoch.div(reduceAmount)
+        );
     }
 
     // --------------------------------------------
@@ -176,16 +198,17 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // Adds additional RAM rewards
     function addRAMRewardsOwner(uint256 _amount) public onlyOwner {
-        require(ram.transferFrom(msg.sender, address(this), _amount), "Approve tokens first");
-        if(_amount > 0) {
+        require(ram.transferFrom(msg.sender, address(this), _amount));
+        if (_amount > 0) {
             pendingRewards = pendingRewards.add(_amount);
             rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
         }
     }
+
     // Adds additional YGY rewards
     function addYGYRewardsOwner(uint256 _amount) public onlyOwner {
-        require(ygy.transferFrom(msg.sender, address(this), _amount), "Approve tokens first");
-        if(_amount > 0) {
+        require(ygy.transferFrom(msg.sender, address(this), _amount));
+        if (_amount > 0) {
             YGYReserve = YGYReserve.add(_amount);
         }
     }
@@ -194,25 +217,17 @@ contract RAMVault is OwnableUpgradeSafe {
     //                  POOL
     // --------------------------------------------
 
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
-    }
-
     // Add a new token pool. Can only be called by the owner.
     // Note contract owner is meant to be a governance contract allowing RAM governance consensus
     function add(
         uint256 _allocPoint,
         IERC20 _token,
-        bool _withUpdate,
         bool _withdrawable
     ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
+        massUpdatePools();
 
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            require(poolInfo[pid].token != _token,"Error pool already added");
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            require(poolInfo[pid].token != _token, "Error pool already added");
         }
 
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
@@ -223,7 +238,7 @@ contract RAMVault is OwnableUpgradeSafe {
                 allocPoint: _allocPoint,
                 accRAMPerShare: 0,
                 accYGYPerShare: 0,
-                withdrawable : _withdrawable,
+                withdrawable: _withdrawable,
                 effectiveAdditionalTokensFromBoosts: 0
             })
         );
@@ -231,15 +246,8 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // Update the given pool's RAMs allocation point. Can only be called by the owner.
     // Note contract owner is meant to be a governance contract allowing RAM governance consensus
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-
+    function set(uint256 _pid, uint256 _allocPoint) public onlyOwner {
+        massUpdatePools();
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
@@ -248,15 +256,15 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // Update the given pool's ability to withdraw tokens
     // Note contract owner is meant to be a governance contract allowing RAM governance consensus
-    function setPoolWithdrawable(
-        uint256 _pid,
-        bool _withdrawable
-    ) public onlyOwner {
+    function setPoolWithdrawable(uint256 _pid, bool _withdrawable)
+        public
+        onlyOwner
+    {
         poolInfo[_pid].withdrawable = _withdrawable;
     }
 
     /** @dev Returns the CURRENT rewards.
-      * It's sync with the latest massUpdatePools.
+     * It's sync with the latest massUpdatePools.
      */
     function checkRewards(uint256 _pid, address _user)
         public
@@ -267,19 +275,24 @@ contract RAMVault is OwnableUpgradeSafe {
         UserInfo storage user = userInfo[_pid][_user];
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
         uint256 YGYRewards;
-        if(pool.accYGYPerShare > 0) {
-            YGYRewards = effectiveAmount.mul(pool.accYGYPerShare).div(1e12).sub(user.rewardDebtYGY);
+        if (pool.accYGYPerShare > 0) {
+            YGYRewards = effectiveAmount.mul(pool.accYGYPerShare).div(1e12).sub(
+                user.rewardDebtYGY
+            );
         }
-        return (effectiveAmount.mul(pool.accRAMPerShare).div(1e12).sub(user.rewardDebt), YGYRewards);
+        return (
+            effectiveAmount.mul(pool.accRAMPerShare).div(1e12).sub(
+                user.rewardDebt
+            ),
+            YGYRewards
+        );
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
     function massUpdatePools() public {
-        console.log("Mass Updating Pools");
-        uint256 length = poolInfo.length;
-        uint allRewards;
-        uint allYGYRewards;
-        for (uint256 pid = 0; pid < length; ++pid) {
+        uint256 allRewards;
+        uint256 allYGYRewards;
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
             (uint256 ramWholeReward, uint256 ygyWholeReward) = updatePool(pid);
             allRewards = allRewards.add(ramWholeReward);
             allYGYRewards = allYGYRewards.add(ygyWholeReward);
@@ -291,46 +304,58 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // Function that adds pending rewards, called by the RAM token.
     function addPendingRewards(uint256 _amount) external {
-        require(msg.sender == address(ram), "Only RAM token can add rewards");
+        require(msg.sender == address(ram));
         pendingRewards = pendingRewards.add(_amount);
         rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
 
         if (YGYReserve >= _amount) {
-            pendingYGYRewards = pendingRewards.add(_amount);
+            pendingYGYRewards = pendingYGYRewards.add(_amount);
             YGYRewardsInThisEpoch = YGYRewardsInThisEpoch.add(_amount);
         }
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 _pid) internal returns (uint256 ramRewardWhole, uint256 ygyRewardWhole) {
+    function updatePool(uint256 _pid)
+        internal
+        returns (uint256 ramRewardWhole, uint256 ygyRewardWhole)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
         uint256 tokenSupply = pool.token.balanceOf(address(this));
-        if (tokenSupply == 0) { // avoids division by 0 errors
+        if (tokenSupply == 0) {
+            // avoids division by 0 errors
             return (0, 0);
         }
 
         // Calculate ram reward to distribute
         ramRewardWhole = pendingRewards // Multiplies pending rewards by allocation point of this pool and then total allocation
-            .mul(pool.allocPoint)        // getting the percent of total pending rewards this pool should get
-            .div(totalAllocPoint);       // we can do this because pools are only mass updated
+            .mul(pool.allocPoint) // getting the percent of total pending rewards this pool should get
+            .div(totalAllocPoint); // we can do this because pools are only mass updated
         uint256 ramRewardFee = ramRewardWhole.mul(DEV_FEE).div(10000);
-        uint256 ramRewardToDistribute = ramRewardWhole.sub(ramRewardFee);
         pending_DEV_rewards = pending_DEV_rewards.add(ramRewardFee);
 
         // Calculate ygy reward to distribute
-        ygyRewardWhole = pendingYGYRewards
-            .mul(pool.allocPoint)
-            .div(totalAllocPoint);
+        ygyRewardWhole = pendingYGYRewards.mul(pool.allocPoint).div(
+            totalAllocPoint
+        );
         uint256 ygyRewardFee = ygyRewardWhole.mul(DEV_FEE).div(10000);
-        uint256 ygyRewardToDistribute = ygyRewardWhole.sub(ygyRewardFee);
         pending_DEV_YGY_rewards = pending_DEV_YGY_rewards.add(ygyRewardFee);
 
         // Add pool's effective additional token amount from boosts
-        uint256 effectivePoolStakedSupply = tokenSupply.add(pool.effectiveAdditionalTokensFromBoosts);
+        uint256 effectivePoolStakedSupply = tokenSupply.add(
+            pool.effectiveAdditionalTokensFromBoosts
+        );
         // Calculate RAMPerShare, accYGYPerShare using effective pool staked supply (not just total supply)
-        pool.accRAMPerShare = pool.accRAMPerShare.add(ramRewardToDistribute.mul(1e12).div(effectivePoolStakedSupply));
-        pool.accYGYPerShare = pool.accYGYPerShare.add(ygyRewardToDistribute.mul(1e12).div(effectivePoolStakedSupply));
+        pool.accRAMPerShare = pool.accRAMPerShare.add(
+            ramRewardWhole.sub(ramRewardFee).mul(1e12).div(
+                effectivePoolStakedSupply
+            )
+        );
+        pool.accYGYPerShare = pool.accYGYPerShare.add(
+            ygyRewardWhole.sub(ygyRewardFee).mul(1e12).div(
+                effectivePoolStakedSupply
+            )
+        );
     }
 
     // Deposit tokens to RamVault for RAM allocation.
@@ -342,24 +367,17 @@ contract RAMVault is OwnableUpgradeSafe {
         updateAndPayOutPending(_pid, msg.sender);
 
         // save gas
-        if(_amount > 0) {
-            pool.token.transferFrom(address(msg.sender), address(this), _amount);
+        if (_amount > 0) {
+            pool.token.transferFrom(
+                address(msg.sender),
+                address(this),
+                _amount
+            );
             user.amount = user.amount.add(_amount);
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
             if (user.boostLevel > 0) {
-                uint256 prevBalancesAccounting = user.boostAmount;
-                // Calculate and set user's new accounting balance
-                uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
-                uint256 newBalancesAccounting = user.amount
-                    .mul(accTotalMultiplier)
-                    .div(100);
-
-                user.boostAmount = newBalancesAccounting;
-
-                // Adjust total accounting supply accordingly
-                uint256 diffBalancesAccounting = newBalancesAccounting.sub(prevBalancesAccounting);
-                pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.add(diffBalancesAccounting);
+                adjustEffectiveStake(pool, user, false);
             }
         }
 
@@ -367,6 +385,32 @@ contract RAMVault is OwnableUpgradeSafe {
         user.rewardDebt = effectiveAmount.mul(pool.accRAMPerShare).div(1e12);
         user.rewardDebtYGY = effectiveAmount.mul(pool.accYGYPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
+    }
+
+    function adjustEffectiveStake(
+        PoolInfo storage pool,
+        UserInfo storage user,
+        bool withdraw
+    ) internal {
+        uint256 prevBalancesAccounting = user.boostAmount;
+        // Calculate and set user's new accounting balance
+        uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
+        uint256 newBalancesAccounting = user.amount.mul(accTotalMultiplier).div(
+            100
+        );
+
+        user.boostAmount = newBalancesAccounting;
+
+        // Adjust total accounting supply accordingly
+        if (withdraw) {
+            pool.effectiveAdditionalTokensFromBoosts = pool
+                .effectiveAdditionalTokensFromBoosts
+                .sub(prevBalancesAccounting.sub(newBalancesAccounting));
+        } else {
+            pool.effectiveAdditionalTokensFromBoosts = pool
+                .effectiveAdditionalTokensFromBoosts
+                .add(newBalancesAccounting.sub(prevBalancesAccounting));
+        }
     }
 
     function claimRewards(uint256 _pid) external {
@@ -378,44 +422,41 @@ contract RAMVault is OwnableUpgradeSafe {
     // [x] Does user get the deposited amounts?
     // [x] Does user that its deposited for update correcty?
     // [x] Does the depositor get their tokens decreased
-    function depositFor(address depositFor, uint256 _pid, uint256 _amount) public {
+    function depositFor(
+        address _depositFor,
+        uint256 _pid,
+        uint256 _amount
+    ) public {
         // requires no allowances
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][depositFor];
+        UserInfo storage user = userInfo[_pid][_depositFor];
 
         // Pay the user
-        updateAndPayOutPending(_pid, depositFor); // Update the balances of person that amount is being deposited for
+        updateAndPayOutPending(_pid, _depositFor); // Update the balances of person that amount is being deposited for
 
-        if(_amount > 0) {
-            pool.token.transferFrom(address(msg.sender), address(this), _amount);
+        if (_amount > 0) {
+            pool.token.transferFrom(msg.sender, address(this), _amount);
             user.amount = user.amount.add(_amount); // This is depositedFor address
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
             if (user.boostLevel > 0) {
-                uint256 prevBalancesAccounting = user.boostAmount;
-                // Calculate and set user's new accounting balance
-                uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
-                uint256 newBalancesAccounting = user.amount
-                    .mul(accTotalMultiplier)
-                    .div(100);
-
-                user.boostAmount = newBalancesAccounting;
-
-                // Adjust total accounting supply accordingly
-                uint256 diffBalancesAccounting = newBalancesAccounting.sub(prevBalancesAccounting);
-                pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.add(diffBalancesAccounting);
+                adjustEffectiveStake(pool, user, false);
             }
         }
 
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
         user.rewardDebt = effectiveAmount.mul(pool.accRAMPerShare).div(1e12); // This is deposited for address
         user.rewardDebtYGY = effectiveAmount.mul(pool.accYGYPerShare).div(1e12); // This is deposited for address
-        emit Deposit(depositFor, _pid, _amount);
+        emit Deposit(_depositFor, _pid, _amount);
     }
 
     // Test coverage
     // [x] Does allowance update correctly?
-    function setAllowanceForPoolToken(address spender, uint256 _pid, uint256 value) public {
+    function setAllowanceForPoolToken(
+        address spender,
+        uint256 _pid,
+        uint256 value
+    ) public {
         PoolInfo storage pool = poolInfo[_pid];
         pool.allowance[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, _pid, value);
@@ -425,10 +466,15 @@ contract RAMVault is OwnableUpgradeSafe {
     // [x] Does allowance decrease?
     // [x] Do oyu need allowance
     // [x] Withdraws to correct address
-    function withdrawFrom(address owner, uint256 _pid, uint256 _amount) public{
+    function withdrawFrom(
+        address owner,
+        uint256 _pid,
+        uint256 _amount
+    ) public {
         PoolInfo storage pool = poolInfo[_pid];
-        require(pool.allowance[owner][msg.sender] >= _amount, "withdraw: insufficient allowance");
-        pool.allowance[owner][msg.sender] = pool.allowance[owner][msg.sender].sub(_amount);
+        require(pool.allowance[owner][msg.sender] >= _amount, "No allowance");
+        pool.allowance[owner][msg.sender] = pool.allowance[owner][msg.sender]
+            .sub(_amount);
         _withdraw(_pid, _amount, owner, msg.sender);
     }
 
@@ -438,33 +484,26 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     // Low level withdraw function
-    function _withdraw(uint256 _pid, uint256 _amount, address from, address to) internal {
+    function _withdraw(
+        uint256 _pid,
+        uint256 _amount,
+        address from,
+        address to
+    ) internal {
         PoolInfo storage pool = poolInfo[_pid];
-        require(pool.withdrawable, "Withdrawing from this pool is disabled");
+        require(pool.withdrawable);
         UserInfo storage user = userInfo[_pid][from];
-        require(user.amount >= _amount, "withdraw: not good");
+        require(user.amount >= _amount);
 
         updateAndPayOutPending(_pid, from); // Update balances of from this is not withdrawal but claiming RAM farmed
 
-        if(_amount > 0) {
+        if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.token.safeTransfer(address(to), _amount);
 
             // Users who have bought multipliers will have their accounting balances readjusted.
             if (user.boostLevel > 0) {
-                // The previous extra balance user had
-                uint256 prevBalancesAccounting = user.boostAmount;
-                // Calculate and set user's new accounting balance
-                uint256 accTotalMultiplier = getTotalMultiplier(user.boostLevel);
-                uint256 newBalancesAccounting = user.amount
-                    .mul(accTotalMultiplier)
-                    .div(100);
-
-                user.boostAmount = newBalancesAccounting;
-                // Subtract the withdrawn amount from the accounting balance
-                // If all tokens are withdrawn the balance will be 0.
-                uint256 diffBalancesAccounting = prevBalancesAccounting.sub(newBalancesAccounting);
-                pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.sub(diffBalancesAccounting);
+                adjustEffectiveStake(pool, user, true);
             }
         }
 
@@ -477,10 +516,10 @@ contract RAMVault is OwnableUpgradeSafe {
     function updateAndPayOutPending(uint256 _pid, address _from) internal {
         massUpdatePools();
         (uint256 pendingRAM, uint256 pendingYGY) = checkRewards(_pid, _from);
-        if(pendingRAM > 0) {
+        if (pendingRAM > 0) {
             safeRamTransfer(_from, pendingRAM);
         }
-        if(pendingYGY > 0) {
+        if (pendingYGY > 0) {
             safeYgyTransfer(_from, pendingYGY);
         }
     }
@@ -489,7 +528,7 @@ contract RAMVault is OwnableUpgradeSafe {
     // !Caution this will remove all your pending rewards!
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
-        require(pool.withdrawable, "Withdrawing from this pool is disabled");
+        require(pool.withdrawable);
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.token.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
@@ -509,17 +548,14 @@ contract RAMVault is OwnableUpgradeSafe {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(
-            _level > user.boostLevel,
-            "Cannot downgrade level or same level"
-        );
+        require(_level > user.boostLevel);
 
         // Cost will be reduced by the amount already spent on multipliers.
         uint256 cost = calculateCost(_level);
         uint256 finalCost = cost.sub(user.spentMultiplierTokens);
 
         // Transfer RAM tokens to the contract
-        require(ram.transferFrom(msg.sender, address(this), finalCost), "Transfer failed");
+        require(ram.transferFrom(msg.sender, address(this), finalCost));
 
         // Update balances and level
         user.spentMultiplierTokens = user.spentMultiplierTokens.add(finalCost);
@@ -529,20 +565,24 @@ contract RAMVault is OwnableUpgradeSafe {
         if (user.amount > 0) {
             // Get the new multiplier
             uint256 accTotalMultiplier = getTotalMultiplier(_level);
-
             // Calculate new accounting  balance
-            uint256 newAccountingAmount = user.amount
+            uint256 newAccountingAmount = user
+                .amount
                 .mul(accTotalMultiplier)
                 .div(100);
 
-           // Get the user's previous accounting balance
+            // Get the user's previous accounting balance
             uint256 prevBalancesAccounting = user.boostAmount;
 
             // Set the user' new accounting balance
-             user.boostAmount = newAccountingAmount;
+            user.boostAmount = newAccountingAmount;
             // Get the difference to adjust the total accounting balance
-            uint256 diffBalancesAccounting = newAccountingAmount.sub(prevBalancesAccounting);
-            pool.effectiveAdditionalTokensFromBoosts = pool.effectiveAdditionalTokensFromBoosts.add(diffBalancesAccounting);
+            uint256 diffBalancesAccounting = newAccountingAmount.sub(
+                prevBalancesAccounting
+            );
+            pool.effectiveAdditionalTokensFromBoosts = pool
+                .effectiveAdditionalTokensFromBoosts
+                .add(diffBalancesAccounting);
         }
 
         boostFees = boostFees.add(finalCost);
@@ -550,43 +590,17 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     // Returns the multiplier for user.
-    function getTotalMultiplier(uint256 _boostLevel) public view returns (uint256) {
-        uint256 boostMultiplier = 0;
-        if (_boostLevel == 1) {
-            boostMultiplier = boostLevelOneMultiplier;
-        } else if (_boostLevel == 2) {
-            boostMultiplier = boostLevelTwoMultiplier;
-        } else if (_boostLevel == 3) {
-            boostMultiplier = boostLevelThreeMultiplier;
-        } else if (_boostLevel == 4) {
-            boostMultiplier = boostLevelFourMultiplier;
-        }
-        return boostMultiplier;
+    function getTotalMultiplier(uint256 _boostLevel)
+        public
+        view
+        returns (uint256)
+    {
+        return boostLevelMultipliers[_boostLevel];
     }
 
     // Calculate the cost for purchasing a boost.
     function calculateCost(uint256 _level) public view returns (uint256) {
-        if (_level == 1) {
-            return boostLevelOneCost;
-        } else if (_level == 2) {
-            return boostLevelTwoCost;
-        } else if (_level == 3) {
-            return boostLevelThreeCost;
-        } else if (_level == 4) {
-            return boostLevelFourCost;
-        }
-    }
-
-   // Returns the users current multiplier level
-    function getLevel(address account, uint256 pid) external view returns (uint256) {
-        UserInfo memory user = userInfo[pid][account];
-        return user.boostLevel;
-    }
-
-    // Return the amount spent on multipliers, used for subtracting for future purchases.
-    function getSpent(address account, uint256 pid) external view returns (uint256) {
-        UserInfo memory user = userInfo[pid][account];
-        return user.spentMultiplierTokens;
+        boostLevelCosts[_level];
     }
 
     // Distributes boost fees to devs and protocol
@@ -598,38 +612,30 @@ contract RAMVault is OwnableUpgradeSafe {
         // Distribute taxes to regenerator and team 50/50%
         uint256 halfDistAmt = totalBoostDistAmt.div(2);
         if (halfDistAmt > 0) {
-                // 50% to regenerator
-                require(ram.transfer(regeneratoraddr, halfDistAmt), "Transfer failed.");
-                // 70% of the other 50% to devs
-                uint256 devDistAmt = halfDistAmt.mul(70).div(100);
-                if (devDistAmt > 0) {
-                    require(ram.transfer(devaddr, devDistAmt), "Transfer failed.");
-                }
-                // 30% of the other 50% to team
-                uint256 teamDistAmt = halfDistAmt.mul(30).div(100);
-                if (teamDistAmt > 0) {
-                    require(ram.transfer(teamaddr, teamDistAmt), "Transfer failed.");
-                }
+            // 50% to regenerator
+            require(ram.transfer(regeneratoraddr, halfDistAmt));
+            // 70% of the other 50% to devs
+            uint256 devDistAmt = halfDistAmt.mul(70).div(100);
+            if (devDistAmt > 0) {
+                require(ram.transfer(devaddr, devDistAmt));
+            }
+            // 30% of the other 50% to team
+            uint256 teamDistAmt = halfDistAmt.mul(30).div(100);
+            if (teamDistAmt > 0) {
+                require(ram.transfer(teamaddr, teamDistAmt));
+            }
         }
     }
 
     function updateBoosts(
-        uint256[] memory _boostMultipliers,
-        uint256[] memory _boostCosts
-    ) public onlyOwner
-    {
-         require(_boostMultipliers.length == 4, "Must specify 4 multipliers");
-         require(_boostCosts.length == 4, "Must specify 4 multipliers");
-         // Update boost costs
-         boostLevelOneCost = _boostCosts[0];
-         boostLevelTwoCost = _boostCosts[1];
-         boostLevelThreeCost = _boostCosts[2];
-         boostLevelFourCost = _boostCosts[3];
-         // Update boost multipliers
-         boostLevelOneMultiplier = _boostMultipliers[0];
-         boostLevelTwoMultiplier = _boostMultipliers[1];
-         boostLevelThreeMultiplier = _boostMultipliers[2];
-         boostLevelFourMultiplier = _boostMultipliers[3];
+        uint256[4] memory _boostMultipliers,
+        uint256[4] memory _boostCosts
+    ) public onlyOwner {
+        // Update boost costs
+        for (uint8 i; i <= _boostMultipliers.length; i++) {
+            boostLevelCosts[i + 1] = _boostCosts[i];
+            boostLevelMultipliers[i + 1] = _boostMultipliers[i];
+        }
     }
 
     // --------------------------------------------
@@ -640,69 +646,64 @@ contract RAMVault is OwnableUpgradeSafe {
     // defaults at 7.24%
     // Note contract owner is meant to be a governance contract allowing RAM governance consensus
     uint16 DEV_FEE;
+
     function setDevFee(uint16 _DEV_FEE) public onlyOwner {
-        require(_DEV_FEE <= 1000, 'Dev fee clamped at 10%');
+        require(_DEV_FEE <= 1000, "Max 10%");
         DEV_FEE = _DEV_FEE;
     }
 
-    uint256 public pending_DEV_rewards;
-    uint256 public pending_DEV_YGY_rewards;
+    uint256 pending_DEV_rewards;
+    uint256 pending_DEV_YGY_rewards;
 
     // function that lets owner/governance contract
     // approve allowance for any token inside this contract
     // This means all future UNI like airdrops are covered
     // And at the same time allows us to give allowance to strategy contracts.
     // Upcoming cYFI etc vaults strategy contracts will  se this function to manage and farm yield on value locked
-    function setStrategyContractOrDistributionContractAllowance(address tokenAddress, uint256 _amount, address contractAddress) public onlySuperAdmin {
-        require(isContract(contractAddress), "Recipent is not a smart contract, BAD");
-        require(block.number > contractStartBlock.add(95_000), "Governance setup grace period not over"); // about 2weeks
+    function setStrategyContractOrDistributionContractAllowance(
+        address tokenAddress,
+        uint256 _amount,
+        address contractAddress
+    ) external {
+        require(isContract(contractAddress) && _superAdmin == _msgSender());
+        require(block.number > contractStartBlock.add(95_000), "Gov not ready");
         IERC20(tokenAddress).approve(contractAddress, _amount);
     }
 
-    function isContract(address addr) public returns (bool) {
-        uint size;
-        assembly { size := extcodesize(addr) }
+    function isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
         return size > 0;
     }
 
-    // Safe ram transfer function, just in case if rounding error causes pool to not have enough RAMs.
     function safeRamTransfer(address _to, uint256 _amount) internal {
         uint256 ramBal = ram.balanceOf(address(this));
 
         if (_amount > ramBal) {
             ram.transfer(_to, ramBal);
-            ramBalance = ram.balanceOf(address(this));
-
         } else {
             ram.transfer(_to, _amount);
-            ramBalance = ram.balanceOf(address(this));
-
         }
-        //Avoids possible recursion loop
-        // proxy?
+        ramBalance = ram.balanceOf(address(this));
         transferRAMDevFee();
     }
 
-    // Safe ram transfer function, just in case if rounding error causes pool to not have enough RAMs.
     function safeYgyTransfer(address _to, uint256 _amount) internal {
         uint256 ygyBal = ygy.balanceOf(address(this));
 
         if (_amount > ygyBal) {
             ygy.transfer(_to, ygyBal);
-            ygyBalance = ygy.balanceOf(address(this));
-
         } else {
             ygy.transfer(_to, _amount);
-            ygyBalance = ygy.balanceOf(address(this));
-
         }
-        //Avoids possible recursion loop
-        // proxy?
+        ygyBalance = ygy.balanceOf(address(this));
         transferYGYDevFee();
     }
 
     function transferRAMDevFee() public {
-        if(pending_DEV_rewards > 0) {
+        if (pending_DEV_rewards > 0) {
             uint256 devDistAmt;
             uint256 teamDistAmt;
             uint256 ramBal = ram.balanceOf(address(this));
@@ -714,8 +715,12 @@ contract RAMVault is OwnableUpgradeSafe {
                 teamDistAmt = pending_DEV_rewards.mul(30).div(100);
             }
 
-            if (devDistAmt > 0) { ram.transfer(devaddr, devDistAmt); }
-            if (teamDistAmt > 0) { ram.transfer(teamaddr, teamDistAmt);}
+            if (devDistAmt > 0) {
+                ram.transfer(devaddr, devDistAmt);
+            }
+            if (teamDistAmt > 0) {
+                ram.transfer(teamaddr, teamDistAmt);
+            }
 
             ramBalance = ram.balanceOf(address(this));
             pending_DEV_rewards = 0;
@@ -723,7 +728,7 @@ contract RAMVault is OwnableUpgradeSafe {
     }
 
     function transferYGYDevFee() public {
-        if(pending_DEV_YGY_rewards > 0) {
+        if (pending_DEV_YGY_rewards > 0) {
             uint256 devDistAmt;
             uint256 teamDistAmt;
             uint256 ygyBal = ygy.balanceOf(address(this));
@@ -735,54 +740,40 @@ contract RAMVault is OwnableUpgradeSafe {
                 teamDistAmt = pending_DEV_YGY_rewards.mul(30).div(100);
             }
 
-            if (devDistAmt > 0) { ygy.transfer(devaddr, devDistAmt); }
-            if (teamDistAmt > 0) { ygy.transfer(teamaddr, teamDistAmt);}
+            if (devDistAmt > 0) {
+                ygy.transfer(devaddr, devDistAmt);
+            }
+            if (teamDistAmt > 0) {
+                ygy.transfer(teamaddr, teamDistAmt);
+            }
 
             ygyBalance = ygy.balanceOf(address(this));
             pending_DEV_YGY_rewards = 0;
         }
     }
 
-    // Update dev address by the previous dev.
-    // Note onlyOwner functions are meant for the governance contract
-    // allowing RAM governance token holders to do this functions.
-    function setDevFeeReciever(address _devaddr) public onlyOwner {
+    function setDevFeeReciever(address _devaddr) external onlyOwner {
         devaddr = _devaddr;
     }
 
-    // --------------------------------------------
-    //                  Admin
-    // --------------------------------------------
-
     address private _superAdmin;
 
-    event SuperAdminTransfered(address indexed previousOwner, address indexed newOwner);
+    event SuperAdminTransfered(address previousOwner, address newOwner);
 
-    /**
-     * @dev Returns the address of the current super admin
-     */
     function superAdmin() public view returns (address) {
         return _superAdmin;
     }
 
-    /**
-     * @dev Throws if called by any account other than the superAdmin
-     */
-    modifier onlySuperAdmin() {
-        require(_superAdmin == _msgSender(), "Super admin : caller is not super admin.");
-        _;
-    }
-
-    // Assisns super admint to address 0, making it unreachable forever
-    function burnSuperAdmin() public virtual onlySuperAdmin {
-        emit SuperAdminTransfered(_superAdmin, address(0));
+    function burnSuperAdmin() public virtual {
+        require(_superAdmin == _msgSender());
         _superAdmin = address(0);
+        emit SuperAdminTransfered(_superAdmin, address(0));
     }
 
-    // Super admin can transfer its powers to another address
-    function newSuperAdmin(address newOwner) public virtual onlySuperAdmin {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit SuperAdminTransfered(_superAdmin, newOwner);
+    function newSuperAdmin(address newOwner) public virtual {
+        require(_superAdmin == _msgSender());
+        require(newOwner != address(0));
         _superAdmin = newOwner;
+        emit SuperAdminTransfered(_superAdmin, newOwner);
     }
 }

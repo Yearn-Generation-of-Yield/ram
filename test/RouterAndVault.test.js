@@ -148,7 +148,7 @@ contract("UniRAMRouter", (accounts) => {
 
   it("RAM vault: YGY->RAM pool deposit and withdraw", async () => {
     // Add a new pool
-    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount }));
+    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
 
@@ -161,7 +161,7 @@ contract("UniRAMRouter", (accounts) => {
 
   it("RAM vault: YGY->RAM pool purchase boosts", async () => {
     // Add a new pool
-    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount }));
+    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
 
@@ -205,7 +205,7 @@ contract("UniRAMRouter", (accounts) => {
 
   it("RAM vault: earn RAM rewards", async () => {
     // Add a new pool
-    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount }));
+    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
 
@@ -240,7 +240,7 @@ contract("UniRAMRouter", (accounts) => {
 
   it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
-    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, true, { from: setterAccount }));
+    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
     // Approve and deposit
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, true, { from: testAccount2, value: (2e18).toString() }));
@@ -323,10 +323,6 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(pendingRamFullMonth > pendingRamHalfMonth);
     assert.isTrue(pendingRamFullMonthUser2 > pendingRamHalfMonthUser2);
     assert.isTrue(pendingYgyFullMonth > pendingYgyHalfMonth); // * NAH
-    const DevFund = Number(await this.RAMvault.pending_DEV_rewards());
-    const YGYDevFund = Number(await this.RAMvault.pending_DEV_YGY_rewards());
-    assert.isTrue(DevFund > 0);
-    assert.isTrue(YGYDevFund > 0);
 
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount3 }));
     truffleAssert.passes(await this.RAMvault.claimRewards(0, { from: testAccount2 }));
@@ -376,6 +372,9 @@ contract("UniRAMRouter", (accounts) => {
       ["Dev YGY balance:", ygyDevBalance],
       ["Dev RAM balance", ramDevBalance],
     ]);
+
+    const pinfo = await this.RAMvault.poolInfo;
+    console.log(pinfo.length);
   });
 
   //  NOTE:

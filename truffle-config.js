@@ -13,8 +13,8 @@ module.exports = {
         return new HDWalletProvider(kovanPrivateKey, kovanProvider);
       },
       network_id: "42",
-      gasPrice: 10000000000,
-      gas: 8200000,
+      gasPrice: 28000000000,
+      gas: 8500000,
     },
   },
   compilers: {
@@ -26,7 +26,7 @@ module.exports = {
       },
     },
   },
-  plugins: ["truffle-plugin-verify"],
+  plugins: ["truffle-plugin-verify", "truffle-contract-size"],
   api_keys: {
     etherscan: etherscanApiKey,
   },
