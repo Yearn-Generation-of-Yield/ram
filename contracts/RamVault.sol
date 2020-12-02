@@ -481,7 +481,6 @@ contract RAMVault is OwnableUpgradeSafe {
             safeRamTransfer(_from, pendingRAM);
         }
         if(pendingYGY > 0 && ygy.balanceOf(address(this)) > pendingYGY) {
-            console.log(ygy.balanceOf(address(this));
             safeYgyTransfer(_from, pendingYGY);
         }
     }
