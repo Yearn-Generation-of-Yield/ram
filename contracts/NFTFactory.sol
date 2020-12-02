@@ -91,7 +91,8 @@ contract NFTFactory is Ownable {
         uint256 _tokenId
     ) external {
         require(
-            _msgSender() == bondedContract,
+            _msgSender() == bondedContract ||
+                _nft.ownerOf(_tokenId) == _msgSender(),
             "Invalid caller: can't delegate NFT"
         );
         _nft.undelegate(_who, _tokenId);
