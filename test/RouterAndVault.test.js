@@ -40,7 +40,7 @@ contract("UniRAMRouter", (accounts) => {
     this.weth.deposit({ from: setterAccount, value: (5e18).toString() });
 
     // Deploy the YGY token
-    this.YGYToken = await Token.new("YGY", "YGY", (200 * 1e18).toString(), { from: setterAccount });
+    this.YGYToken = await Token.new("YGY", "YGY", web3.utils.toWei("200000"), { from: setterAccount });
 
     // Deploy a new RAM token which manages Governance for the protocol
     this.RAMToken = await RAM.new(this.uniV2Factory.address, { from: setterAccount });
@@ -122,6 +122,8 @@ contract("UniRAMRouter", (accounts) => {
       this.dXiotToken.address,
       { from: setterAccount }
     );
+
+    await this.YGYToken.approve(this.RAMRouter.address, web3.utils.toWei("10000000"), { from: setterAccount });
 
     // // Bond NFT factory and deploy NFTs using RAM router
     await this.nftFactory.bondContract(this.RAMRouter.address, { from: setterAccount });
@@ -379,18 +381,28 @@ contract("UniRAMRouter", (accounts) => {
 
   it.only("should be able to spam router", async () => {
     // Add a new pool
+    truffleAssert.passes(await this.YGYToken.mint(testAccount2, web3.utils.toWei("10000000000"), { from: setterAccount }));
+    truffleAssert.passes(await this.YGYToken.mint(setterAccount, web3.utils.toWei("10000000000"), { from: setterAccount }));
+    await this.YGYToken.approve(this.RAMRouter.address, web3.utils.toWei("100000000"), { from: testAccount2 });
+    await this.YGYToken.approve(this.RAMRouter.address, web3.utils.toWei("100000000"), { from: setterAccount });
+
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, true, { from: testAccount2, value: (2e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount3, true, { from: testAccount3, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("100"), true, { from: setterAccount, value: 0 }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount3, true, { from: testAccount3, value: (20e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, true, { from: testAccount2, value: (2e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("100"), false, { from: setterAccount, value: 0 }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
-    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: testAccount2, value: (2e18).toString() }));
-    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: setterAccount, value: 0 }));
-    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: setterAccount, value: 0 }));
+    truffleAssert.passes(
+      await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("100"), false, { from: testAccount2, value: (2e18).toString() })
+    );
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("1000"), false, { from: setterAccount, value: 0 }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("100"), false, { from: setterAccount, value: 0 }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(web3.utils.toWei("100"), false, { from: setterAccount, value: 0 }));
   });
 
   //  NOTE:

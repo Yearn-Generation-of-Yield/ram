@@ -1,6 +1,7 @@
 /node_modules
 /build
 /cache
+bin
 /artifacts
 .DS_Store
 /artifacts
