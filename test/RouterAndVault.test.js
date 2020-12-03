@@ -238,7 +238,7 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(afterBalVault < belowBalVault);
   });
 
-  it.only("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
+  it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
@@ -375,6 +375,22 @@ contract("UniRAMRouter", (accounts) => {
 
     const cost = await this.RAMvault.calculateCost(1);
     console.log(cost);
+  });
+
+  it.only("should be able to spam router", async () => {
+    // Add a new pool
+    truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
+
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, true, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount3, true, { from: testAccount3, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount3, true, { from: testAccount3, value: (20e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, true, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: testAccount2, value: (2e18).toString() }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: setterAccount, value: 0 }));
+    truffleAssert.passes(await this.RAMRouter.addLiquidityYGYOnly(setterAccount, false, { from: setterAccount, value: 0 }));
   });
 
   //  NOTE:

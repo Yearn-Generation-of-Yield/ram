@@ -305,7 +305,7 @@ contract RAMVault is OwnableUpgradeSafe {
             YGYReserve = YGYReserve.sub(_amount);
         } else if (YGYReserve > 0) {
             pendingYGYRewards = pendingYGYRewards.add(YGYReserve);
-            YGYReserve = YGYReserve.sub(_amount);
+            YGYReserve = 0;
         }
     }
 
