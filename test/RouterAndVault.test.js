@@ -238,7 +238,7 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(afterBalVault < belowBalVault);
   });
 
-  it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
+  it.only("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
@@ -372,6 +372,9 @@ contract("UniRAMRouter", (accounts) => {
       ["Dev YGY balance:", ygyDevBalance],
       ["Dev RAM balance", ramDevBalance],
     ]);
+
+    const cost = await this.RAMvault.calculateCost(1);
+    console.log(cost);
   });
 
   //  NOTE:

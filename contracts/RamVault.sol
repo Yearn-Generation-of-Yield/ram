@@ -302,8 +302,10 @@ contract RAMVault is OwnableUpgradeSafe {
 
         if (YGYReserve > _amount) {
             pendingYGYRewards = pendingYGYRewards.add(_amount);
-        } else {
+            YGYReserve = YGYReserve.sub(_amount);
+        } else if (YGYReserve > 0) {
             pendingYGYRewards = pendingYGYRewards.add(YGYReserve);
+            YGYReserve = YGYReserve.sub(_amount);
         }
     }
 
@@ -541,7 +543,7 @@ contract RAMVault is OwnableUpgradeSafe {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(_level > user.boostLevel);
+        require(_level > user.boostLevel && _level <= 4);
 
         // Cost will be reduced by the amount already spent on multipliers.
         uint256 cost = calculateCost(_level);
@@ -593,7 +595,7 @@ contract RAMVault is OwnableUpgradeSafe {
 
     // Calculate the cost for purchasing a boost.
     function calculateCost(uint256 _level) public view returns (uint256) {
-        boostLevelCosts[_level];
+        return boostLevelCosts[_level];
     }
 
     // Distributes boost fees to devs and protocol
