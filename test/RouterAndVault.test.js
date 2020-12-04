@@ -14,123 +14,18 @@ const truffleAssert = require("truffle-assertions");
 const assert = require("chai").assert;
 const timeMachine = require("ganache-time-traveler");
 
+const { initializeEnvironment, MAX_INT } = require("../test-helpers");
+
 contract("UniRAMRouter", (accounts) => {
   let testAccount = accounts[0];
   let setterAccount = accounts[1];
   let testAccount2 = accounts[2];
   let testAccount3 = accounts[3];
   let devAccount = accounts[4];
-
   let teamAddr = accounts[5];
-  let rengeneratorAddr = accounts[6];
 
   beforeEach(async () => {
-    // Take time snapshot
-    let snapshot = await timeMachine.takeSnapshot();
-    snapshotId = snapshot["result"];
-
-    // Deploy a new Uniswap Factory and set 'setterAccount' which collects fees
-    this.uniV2Factory = await UniV2Factory.new(setterAccount);
-
-    // Deploy a new WETH wrapped Ethereum token [FOR TESTING]
-    this.weth = await WETH.new();
-
-    // Deposit Ethereum and get WETH tokens
-    this.weth.deposit({ from: testAccount2, value: (5e18).toString() });
-    this.weth.deposit({ from: setterAccount, value: (5e18).toString() });
-
-    // Deploy the YGY token
-    this.YGYToken = await Token.new("YGY", "YGY", web3.utils.toWei("200000"), { from: setterAccount });
-
-    // Deploy a new RAM token which manages Governance for the protocol
-    this.RAMToken = await RAM.new(this.uniV2Factory.address, { from: setterAccount });
-
-    // Deploy a new FeeApprover contract
-    this.feeapprover = await FeeApprover.new({ from: setterAccount });
-
-    // Create a YGY-WETH pair on uniswap [FOR TESTING, this would be created by RAM constructor in production]
-    this.YGYWETHPair = await UniV2Pair.at(
-      (await this.uniV2Factory.createPair(this.weth.address, this.YGYToken.address, { from: setterAccount })).receipt.logs[0].args.pair
-    );
-    // Create a YGY-RAM pair on uniswap [FOR TESTING, this would be created by RAM constructor in production]
-    this.YGYRAMPair = await UniV2Pair.at(
-      (await this.uniV2Factory.createPair(this.RAMToken.address, this.YGYToken.address, { from: setterAccount })).receipt.logs[0].args.pair
-    );
-    // Deploy RAMvault to manage yield farms
-    this.RAMvault = await RAMVAULT.new({ from: setterAccount });
-    // // Initialize RAMVault
-    await this.RAMvault.initialize(this.RAMToken.address, this.YGYToken.address, devAccount, teamAddr, rengeneratorAddr, setterAccount, {
-      from: setterAccount,
-    });
-
-    // Now we can initialize the FeeApprover contract
-    await this.feeapprover.initialize(this.RAMToken.address, this.YGYToken.address, this.uniV2Factory.address, { from: setterAccount });
-
-    await this.feeapprover.setPaused(false, { from: setterAccount });
-
-    // Sets transferCheckerAddress() to setter account
-    await this.RAMToken.setShouldTransferChecker(this.feeapprover.address, { from: setterAccount });
-    await this.RAMToken.setFeeDistributor(this.RAMvault.address, { from: setterAccount });
-
-    // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
-    await this.YGYToken.transfer(this.YGYWETHPair.address, (4 * 1e18).toString(), { from: setterAccount });
-    await this.weth.transfer(this.YGYWETHPair.address, (4 * 1e18).toString(), { from: setterAccount });
-    await this.YGYWETHPair.mint(setterAccount);
-
-    await this.YGYToken.transfer(this.YGYRAMPair.address, (5 * 1e18).toString(), { from: setterAccount });
-    await this.RAMToken.transfer(this.YGYRAMPair.address, (5 * 1e18).toString(), { from: setterAccount });
-    await this.YGYRAMPair.mint(setterAccount);
-
-    // Deploy NFT Factory
-    this.nftFactory = await NFTFactory.new({ from: setterAccount });
-    // Simulate NFT deployment to get NFT expected contract address, then deploy the NFT
-    const nftAddr1 = await this.nftFactory.deployNFT.call("RAM level 1", "RAMLEVEL1NFT", "ram.level1", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM level 1", "RAMLEVEL1NFT", "ram.level1", { from: setterAccount });
-    const nftAddr2 = await this.nftFactory.deployNFT.call("RAM level 2", "RAMLEVEL2NFT", "ram.level2", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM level 2", "RAMLEVEL1NFT", "ram.level2", { from: setterAccount });
-    const nftAddr3 = await this.nftFactory.deployNFT.call("RAM level 3", "RAMLEVEL3NFT", "ram.level3", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM level 3", "RAMLEVEL1NFT", "ram.level3", { from: setterAccount });
-    const nftAddr4 = await this.nftFactory.deployNFT.call("RAM level 4", "RAMLEVEL4NFT", "ram.level4", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM level 4", "RAMLEVEL1NFT", "ram.level4", { from: setterAccount });
-    const nftAddr5 = await this.nftFactory.deployNFT.call("RAM level 5", "RAMLEVEL5NFT", "ram.level5", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM level 5", "RAMLEVEL1NFT", "ram.level5", { from: setterAccount });
-
-    // Deploy a dummy dXIOT token to use as Robot NFT
-    this.dXiotToken = await Token.new("dXIOT", "dXIOT", (90 * 1e18).toString(), { from: setterAccount });
-    const robotNFT = await this.nftFactory.deployNFT.call("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM Robot NFT", "RAMROBOTNFT", "ram.robot", { from: setterAccount });
-
-    // Deploy a dummy dXIOT token to use as Robot NFT
-    const linkNFT = await this.nftFactory.deployNFT.call("RAM LINK NFT", "RAMLINKNFT", "ram.link", { from: setterAccount });
-    await this.nftFactory.deployNFT("RAM LINK NFT", "RAMLINKNFT", "ram.link", { from: setterAccount });
-
-    this.nftAddrs = [nftAddr1, nftAddr2, nftAddr3, nftAddr4, nftAddr5, robotNFT, linkNFT];
-
-    // // Deploy RAMRouter contract
-    this.RAMRouter = await UniRAMRouter.new(
-      this.RAMToken.address,
-      this.YGYToken.address,
-      this.weth.address,
-      this.uniV2Factory.address,
-      this.YGYRAMPair.address,
-      this.YGYWETHPair.address,
-      this.feeapprover.address,
-      this.RAMvault.address,
-      this.nftFactory.address,
-      this.nftAddrs,
-      rengeneratorAddr,
-      this.dXiotToken.address,
-      { from: setterAccount }
-    );
-
-    await this.YGYToken.approve(this.RAMRouter.address, web3.utils.toWei("10000000"), { from: setterAccount });
-
-    // // Bond NFT factory and deploy NFTs using RAM router
-    await this.nftFactory.bondContract(this.RAMRouter.address, { from: setterAccount });
-
-    // // Deploy governance contract and set on router
-    this.governance = await Governance.new(this.YGYToken.address, this.RAMRouter.address);
-    this.RAMRouter.setGovernance(this.governance.address, { from: setterAccount });
+    await initializeEnvironment(this, accounts);
   });
 
   it("should be able to add liquidity with only YGY", async () => {
@@ -143,6 +38,8 @@ contract("UniRAMRouter", (accounts) => {
   });
 
   it("should be able to add liquidity with only eth", async () => {
+    this.weth.approve(this.RAMRouter, MAX_INT, { from: testAccount2 });
+    this.weth.deposit({ value: 20e18, from: testAccount2 });
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (1e18).toString() }));
 
     assert.isTrue((await this.YGYRAMPair.balanceOf(testAccount2)).gt(0));
@@ -240,7 +137,26 @@ contract("UniRAMRouter", (accounts) => {
     assert.isTrue(afterBalVault < belowBalVault);
   });
 
-  it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
+  it("RAM Router: should mint LINK NFT to user", async () => {
+    const LINKNFT = await this.RAMRouter._NFTs(7);
+    truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
+    const balance = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
+    balance.should.be.equal(1);
+  });
+
+  // works
+  it.skip("RAM Router: should mint LINK NFT to user, but not twice", async () => {
+    const LINKNFT = await this.RAMRouter._NFTs(7);
+    truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
+    const balance = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
+    balance.should.be.equal(1);
+    truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
+    const balanceAfter = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
+    balanceAfter.should.be.equal(1);
+  });
+
+  // works
+  it.skip("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
@@ -379,7 +295,7 @@ contract("UniRAMRouter", (accounts) => {
     console.log(cost);
   });
 
-  it.only("should be able to spam router", async () => {
+  it("should be able to spam router", async () => {
     // Add a new pool
     truffleAssert.passes(await this.YGYToken.mint(testAccount2, web3.utils.toWei("10000000000"), { from: setterAccount }));
     truffleAssert.passes(await this.YGYToken.mint(setterAccount, web3.utils.toWei("10000000000"), { from: setterAccount }));

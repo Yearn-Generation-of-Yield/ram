@@ -33,11 +33,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public regeneratorTax;
 
     // RNG
-    uint256 public constant MAX = uint256(0) - uint256(1); // using underflow to generate the maximum possible value
+    uint256 public constant MAX = 2**256 - 1;
     uint256 public constant SCALE = 100;
     uint256 public constant SCALIFIER = MAX / SCALE;
     uint256 public constant OFFSET = 1;
-    bool public randomReady;
     uint256 public randomResult;
     uint256 public rngLinkFee;
     bytes32 internal keyHash;
@@ -73,12 +72,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         address nftFactory,
         address[] memory nfts,
         address payable _regenerator,
-        address dXIOTToken
+        address dXIOTToken,
+        // stack prolly too deep so update hard code for test/mainnnetts
+        address linkAddr,
+        address vrfAddr
     )
         public
         VRFConsumerBase(
-            0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator (KOVAN)
-            0xa36085F69e2889c224210F603D836748e7dC0088 // LINK Token (KOVAN)
+            vrfAddr, // VRF Coordinator (KOVAN) 0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9,
+            linkAddr // LINK Token (KOVAN) 0xa36085F69e2889c224210F603D836748e7dC0088
         )
     {
         _RAMToken = RAMToken;
@@ -235,13 +237,14 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        // If a known random number is ready we reset it by applying it to existing lottery tickets
-        if (randomReady) {
-            applyRandomNumberToLottery();
-        }
+        // TODO: CHANGE TO TEH CORRECT ADDRESS
+        _dXIOTToken.transferFrom(
+            0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4,
+            to,
+            1 * 1e18
+        );
 
         generateLotteryTickets(to);
-
         sync();
     }
 
@@ -374,7 +377,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         public
         returns (bytes32 requestId)
     {
-        require(!randomReady, "There is already a random number available");
         require(
             LINK.balanceOf(address(this)) >= rngLinkFee,
             "Not enough LINK on contract"
@@ -389,16 +391,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         public
         returns (bytes32 requestId)
     {
-        require(!randomReady, "There is already a random number available");
         require(
             LINK.transferFrom(msg.sender, address(this), rngLinkFee),
             "Not enough LINK approved to contract"
         );
 
-        // // Mint a LINK NFT to caller (only if they don't have one yet)
-        // if (INFT(_NFTs[7]).balanceOf(msg.sender) == 0) {
-        //     _NFTFactory.mint(INFT(_NFTs[7]), msg.sender);
-        // }
+        // Mint a LINK NFT to caller (only if they don't have one yet)
+        if (INFT(_NFTs[7]).balanceOf(msg.sender) == 0) {
+            _NFTFactory.mint(INFT(_NFTs[7]), msg.sender);
+        }
 
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
@@ -410,17 +411,19 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
         internal
         override
     {
-        uint256 scaled = randomness / SCALIFIER;
-        uint256 adjusted = scaled + OFFSET;
-        randomResult = adjusted;
-        randomReady = true;
+        randomResult = rand(randomness);
+        applyRandomNumberToLottery();
     }
 
-    function applyRandomNumberToLottery() public {
-        require(randomReady, "There is no random number available");
+    function rand(uint256 randomness) private pure returns (uint256 result) {
+        uint256 factor = (randomness * 100) / 100;
+        return factor % 100;
+    }
 
+    function applyRandomNumberToLottery() internal {
         for (uint256 i = 1; i <= ticketCount; i++) {
             LotteryTicket memory ticket = tickets[ticketCount];
+            console.log(ticket.levelFiveChance);
             if (randomResult <= ticket.levelOneChance) {
                 _NFTFactory.mint(INFT(_NFTs[1]), ticket.owner);
             }
@@ -433,20 +436,22 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             if (randomResult <= ticket.levelFourChance) {
                 _NFTFactory.mint(INFT(_NFTs[4]), ticket.owner);
             }
+            console.log("here", ticket.levelFiveChance);
             if (randomResult <= ticket.levelFiveChance) {
                 _NFTFactory.mint(INFT(_NFTs[5]), ticket.owner);
             }
 
-            delete tickets[ticketCount];
+            delete liquidityContributedEthValue[ticket.owner];
+            delete tickets[i];
+            delete lastTicketLevel[ticket.owner];
         }
 
         // Reset lottery
         randomResult = 0;
         ticketCount = 0;
-        randomReady = false;
     }
 
-    function getUserLotteryLevel(address user) public returns (uint256) {
+    function getUserLotteryLevel(address user) public view returns (uint256) {
         uint256 liquidityEthValue = liquidityContributedEthValue[user];
         if (liquidityEthValue < 1e18) {
             return 0;
@@ -469,8 +474,12 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
     // Mints a robot NFT to specified user if their dXIOT balance is over 20+
     function mintRobotNFT(address user) internal {
-        if (_dXIOTToken.balanceOf(user) > 20e18) {
-            _NFTFactory.mint(INFT(_NFTs[6]), user);
+        INFT robot = INFT(_NFTs[6]);
+        if (
+            _dXIOTToken.balanceOf(user) >= 20e18 &&
+            _NFTFactory.balanceOf(robot, user) == 0
+        ) {
+            _NFTFactory.mint(INFT(robot), user);
         }
     }
 
@@ -478,7 +487,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     function generateLotteryTickets(address user) internal {
         uint256 currentLevel = lastTicketLevel[user];
         uint256 newLevel = getUserLotteryLevel(user);
-
         for (uint256 i = currentLevel; i < newLevel; i++) {
             LotteryTicket memory ticket;
             if (i == 0) {
@@ -508,7 +516,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 0,
                     levelFiveChance: 0
                 });
-                mintRobotNFT(user);
             } else if (i == 3) {
                 ticket = LotteryTicket({
                     owner: user,
@@ -518,7 +525,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 50,
                     levelFiveChance: 0
                 });
-                mintRobotNFT(user);
             } else if (i == 4) {
                 ticket = LotteryTicket({
                     owner: user,
@@ -528,7 +534,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 75,
                     levelFiveChance: 50
                 });
-                mintRobotNFT(user);
                 // Level 6 is an automatic winning ticket at every level except level 5, which is 50%
             } else if (i == 5) {
                 ticket = LotteryTicket({
@@ -539,11 +544,11 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 100,
                     levelFiveChance: 50
                 });
-                mintRobotNFT(user);
                 // Level 7 is a winning ticket for each level + another winning ticket for levels 1-4
             } else if (i == 6) {
                 // Winning ticket (levels 1-5)
-                LotteryTicket memory winningTicket = LotteryTicket({
+                ticketCount = ticketCount.add(1);
+                tickets[ticketCount] = LotteryTicket({
                     owner: user,
                     levelOneChance: 100,
                     levelTwoChance: 100,
@@ -551,8 +556,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                     levelFourChance: 100,
                     levelFiveChance: 100
                 });
-                ticketCount = ticketCount.add(1);
-                tickets[ticketCount] = winningTicket;
 
                 // Winning ticket (levels 1-4)
                 ticket = LotteryTicket({
@@ -570,6 +573,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
                 ticketCount = ticketCount.add(1);
                 tickets[ticketCount] = ticket;
             }
+        }
+
+        if (newLevel >= 3) {
+            mintRobotNFT(user);
         }
         lastTicketLevel[user] = newLevel;
     }

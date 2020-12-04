@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0;
+pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
-import "./NFT.sol";
 import "./INFT.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./NFT.sol";
+import "@nomiclabs/buidler/console.sol";
 
 contract NFTFactory is Ownable {
     address[] public contracts;
@@ -12,9 +14,14 @@ contract NFTFactory is Ownable {
 
     mapping(address => bool) public ownedContracts;
 
+    struct NFTProperty {
+        string pType;
+        uint256 pValue;
+    }
+
+    mapping(address => NFTProperty[]) public nftProperties;
+
     event NFTMinted(string tokenName, address to, uint256 tokenId);
-    event NFTDelegated(string tokenName, address to, uint256 tokenId);
-    event NFTUndelegated(string tokenName, address from, uint256 tokenId);
     event NFTBurned(string tokenName, address from, uint256 tokenId);
 
     function deployNFT(
@@ -22,7 +29,7 @@ contract NFTFactory is Ownable {
         string memory symbol,
         string memory tokenURI,
         address admin,
-        bool isPausableToken,
+        bool allowTrade,
         bool isCapped,
         uint256 capAmount
     ) public returns (NFT newContract) {
@@ -37,7 +44,7 @@ contract NFTFactory is Ownable {
             symbol,
             tokenURI,
             admin,
-            isPausableToken,
+            allowTrade,
             isCapped,
             capAmount
         );
@@ -56,74 +63,60 @@ contract NFTFactory is Ownable {
         INFT _nft,
         address _who,
         uint256 tokenId
-    ) external returns (bool) {
+    ) external view returns (bool) {
         return _nft.ownerOf(tokenId) == _who;
     }
 
-    function balanceOf(INFT _nft, address _owner)
-        public
+    function tokenURI(INFT _nft) external view returns (string memory) {
+        return _nft._tokenURI();
+    }
+
+    function balanceOf(INFT _nft, address _who)
+        external
         view
         returns (uint256)
     {
-        return _nft.balanceOf(_owner);
+        console.log("Querying balance", _who);
+        return _nft.balanceOf(_who);
     }
 
-    function hasDelegation(INFT _nft, address _who)
-        external
-        view
-        returns (bool)
-    {
-        _nft.hasDelegation(_who);
-    }
-
-    function delegate(INFT _nft, address _to) external {
+    function mint(INFT _nft, address _to) external returns (uint256) {
         require(
-            _msgSender() == bondedContract,
-            "Invalid caller: can't delegate NFT"
-        );
-        uint256 tokenId = _nft.delegate(_to);
-        emit NFTDelegated(_nft.name(), _to, tokenId);
-    }
-
-    function undelegate(
-        INFT _nft,
-        address _who,
-        uint256 _tokenId
-    ) external {
-        require(
-            _msgSender() == bondedContract ||
-                _nft.ownerOf(_tokenId) == _msgSender(),
-            "Invalid caller: can't delegate NFT"
-        );
-        _nft.undelegate(_who, _tokenId);
-        emit NFTUndelegated(_nft.name(), _who, _tokenId);
-    }
-
-    function mint(INFT _nft, address _to) external {
-        require(
-            _msgSender() == bondedContract,
-            "Invalid caller: can't mint NFT"
+            _msgSender() == bondedContract || _msgSender() == owner(),
+            "INVCALLER"
         );
         uint256 tokenId = _nft.mint(_to);
         emit NFTMinted(_nft.name(), _to, tokenId);
+        return tokenId;
     }
 
     function burn(INFT _nft, uint256 _tokenId) external {
         require(
             _nft.ownerOf(_tokenId) == _msgSender() ||
                 _msgSender() == bondedContract,
-            "Invalid caller: cannot burn"
+            "INVCALLER"
         );
         _nft.burn(_tokenId);
         emit NFTBurned(_nft.name(), _msgSender(), _tokenId);
     }
 
-    function bondContract(address addr) public onlyOwner returns (bool) {
-        bondedContract = addr;
+    function setNFTProperties(address _nft, NFTProperty[] memory _properties)
+        external
+        onlyOwner
+    {
+        NFTProperty[] storage properties;
+        for (uint256 i; i < _properties.length; i++) {
+            properties.push(_properties[i]);
+        }
+        nftProperties[_nft] = properties;
+    }
+
+    function bondContract(address _addr) external onlyOwner returns (bool) {
+        bondedContract = _addr;
         return true;
     }
 
-    function getContractCount() public view returns (uint256 contractCount) {
+    function getContractCount() external view returns (uint256 contractCount) {
         return contracts.length;
     }
 }

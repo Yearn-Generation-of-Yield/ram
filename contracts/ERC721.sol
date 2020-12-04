@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/EnumerableMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@nomiclabs/buidler/console.sol";
 
 /**
  * @title ERC721 Non-Fungible Token Standard basic implementation
@@ -387,11 +388,11 @@ contract ERC721 is
         require(!_exists(tokenId), "ERC721: token already minted");
 
         _beforeTokenTransfer(address(0), to, tokenId);
-
         _holderTokens[to].add(tokenId);
 
         _tokenOwners.set(tokenId, to);
 
+        console.log("minting", tokenId, to, _holderTokens[to].length());
         emit Transfer(address(0), to, tokenId);
     }
 

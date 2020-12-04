@@ -13,7 +13,7 @@ import "@nomiclabs/buidler/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // for WETH
 import "./uniswapv2/interfaces/IUniswapV2Factory.sol"; // interface factorys
 import "./uniswapv2/interfaces/IUniswapV2Router02.sol"; // interface factorys
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -52,8 +52,8 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    event LiquidityAddition(address indexed dst, uint value);
-    event LPTokenClaimed(address dst, uint value);
+    event LiquidityAddition(address indexed dst, uint256 value);
+    event LPTokenClaimed(address dst, uint256 value);
 
     uint256 private _totalSupply;
 
@@ -62,7 +62,6 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     uint8 private _decimals;
     uint256 public constant initialSupply = 10000e18; // 10k
     uint256 public contractStartTimestamp;
-
 
     /**
      * @dev Returns the name of the token.
@@ -80,7 +79,11 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
         contractStartTimestamp = block.timestamp;
         // uniswapRouterV2 = IUniswapV2Router02(router != address(0) ? router : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // For testing
-        uniswapFactory = IUniswapV2Factory(factory != address(0) ? factory : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f); // For testing
+        uniswapFactory = IUniswapV2Factory(
+            factory != address(0)
+                ? factory
+                : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        ); // For testing
         // createUniswapPairMainnet(_YGY); // TODO: uncomment for production
     }
 
@@ -126,18 +129,13 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         return _balances[_owner];
     }
 
-
     IUniswapV2Factory public uniswapFactory;
-
 
     address public tokenUniswapPair;
 
     function createUniswapPairMainnet(address _YGY) public returns (address) {
         require(tokenUniswapPair == address(0), "Token: pool already created");
-        tokenUniswapPair = uniswapFactory.createPair(
-            _YGY,
-            address(this)
-        );
+        tokenUniswapPair = uniswapFactory.createPair(_YGY, address(this));
         return tokenUniswapPair;
     }
 
@@ -282,17 +280,11 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
     address public transferCheckerAddress;
 
-    function setFeeDistributor(address _feeDistributor)
-        public
-        onlyOwner
-    {
+    function setFeeDistributor(address _feeDistributor) public onlyOwner {
         feeDistributor = _feeDistributor;
     }
 
     address public feeDistributor;
-
-
-
 
     /**
      * @dev Moves tokens `amount` from `sender` to `recipient`.
@@ -323,21 +315,41 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
             "ERC20: transfer amount exceeds balance"
         );
 
-        (uint256 transferToAmount, uint256 transferToFeeDistributorAmount) = IFeeApprover(transferCheckerAddress).calculateAmountsAfterFee(sender, recipient, amount);
-        console.log("Sender is :" , sender, "Recipent is :", recipient);
-        console.log("amount is ", amount);
+        (
+            uint256 transferToAmount,
+            uint256 transferToFeeDistributorAmount
+        ) = IFeeApprover(transferCheckerAddress).calculateAmountsAfterFee(
+            sender,
+            recipient,
+            amount
+        );
+        // console.log("Sender is :" , sender, "Recipent is :", recipient);
+        // console.log("amount is ", amount);
 
         // Addressing a broken checker contract
-        require(transferToAmount.add(transferToFeeDistributorAmount) == amount, "Math broke, does gravity still work?");
+        require(
+            transferToAmount.add(transferToFeeDistributorAmount) == amount,
+            "Math broke, does gravity still work?"
+        );
 
         _balances[recipient] = _balances[recipient].add(transferToAmount);
         emit Transfer(sender, recipient, transferToAmount);
 
-        if(transferToFeeDistributorAmount > 0 && feeDistributor != address(0)){
-            _balances[feeDistributor] = _balances[feeDistributor].add(transferToFeeDistributorAmount);
-            emit Transfer(sender, feeDistributor, transferToFeeDistributorAmount);
-            if(feeDistributor != address(0)){
-                IRAMVault(feeDistributor).addPendingRewards(transferToFeeDistributorAmount);
+        if (
+            transferToFeeDistributorAmount > 0 && feeDistributor != address(0)
+        ) {
+            _balances[feeDistributor] = _balances[feeDistributor].add(
+                transferToFeeDistributorAmount
+            );
+            emit Transfer(
+                sender,
+                feeDistributor,
+                transferToFeeDistributorAmount
+            );
+            if (feeDistributor != address(0)) {
+                IRAMVault(feeDistributor).addPendingRewards(
+                    transferToFeeDistributorAmount
+                );
             }
         }
     }
