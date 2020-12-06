@@ -256,9 +256,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
             }
         }
 
-        uint256 effectiveAmount = user.amount.add(user.boostAmount);
-        user.rewardDebt = effectiveAmount.mul(pool.accRAMPerShare).div(1e12); // This is deposited for address
-        user.rewardDebtYGY = effectiveAmount.mul(pool.accYGYPerShare).div(1e12); // This is deposited for address
+        user.updateDebts(pool);
         emit Deposit(_depositFor, _pid, _amount);
     }
 
@@ -319,9 +317,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
             }
         }
 
-        uint256 effectiveAmount = user.amount.add(user.boostAmount);
-        user.rewardDebt = effectiveAmount.mul(pool.accRAMPerShare).div(1e12);
-        user.rewardDebtYGY = effectiveAmount.mul(pool.accYGYPerShare).div(1e12);
+        user.updateDebts(pool);
         emit Withdraw(to, _pid, _amount);
     }
 
