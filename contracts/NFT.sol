@@ -45,44 +45,6 @@ contract NFT is ERC721, AccessControl {
     }
 
     /**
-     * @dev Instead of minting tokens to users, some will only be delegated.
-     * This will prevent misusing the system for example LINK NFT's.
-     */
-    // function delegate(address _to) external {
-    //     require(hasRole(DELEGATOR_ROLE, msg.sender), "Not allowed");
-    //     uint256 tokenId = mint(_msgSender());
-    //     // Mint the token to the delegatos
-    //     Delegation memory delegation = Delegation({
-    //         tokenId: tokenId,
-    //         exists: true
-    //     });
-    //     delegations[_to] = delegation;
-    //     delegateCount++;
-    // }
-
-    /**
-     * @dev Undelegation will burn the token from the delegator and clear the delegation entry.
-     */
-    // function undelegate(address _who, uint256 _tokenId) public {
-    //     require(hasRole(DELEGATOR_ROLE, _msgSender()), "Not allowed");
-    //     Delegation memory delegation = delegations[_who];
-
-    //     if (delegation.exists && delegation.tokenId == _tokenId) {
-    //         delete delegations[_who];
-    //         _burn(_tokenId);
-    //         delegateCount--;
-    //     }
-    // }
-
-    /**
-     * @dev Check if user has delegation for this particular token.
-     */
-    // function hasDelegation(address _who) public view returns (bool) {
-    //     Delegation memory delegation = delegations[_who];
-    //     return delegation.exists;
-    // }
-
-    /**
      * @dev Used for tokens that are transferrable and non-delegating.
      */
     function burn(uint256 _tokenId) external {

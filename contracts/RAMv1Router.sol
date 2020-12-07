@@ -3,7 +3,8 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+// import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+import "./mocks/VRFConsumerBase.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
 import "./uniswapv2/libraries/Math.sol";
 import "./uniswapv2/libraries/UniswapV2Library.sol";
@@ -422,7 +423,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
 
     function applyRandomNumberToLottery() internal {
         for (uint256 i = 1; i <= ticketCount; i++) {
-            LotteryTicket memory ticket = tickets[ticketCount];
+            LotteryTicket memory ticket = tickets[i];
             console.log(ticket.levelFiveChance);
             if (randomResult <= ticket.levelOneChance) {
                 _NFTFactory.mint(INFT(_NFTs[1]), ticket.owner);

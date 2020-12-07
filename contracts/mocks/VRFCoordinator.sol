@@ -4,11 +4,14 @@ import "@chainlink/contracts/src/v0.6/vendor/SafeMathChainlink.sol";
 import "./VRFConsumerBase.sol";
 
 import "@chainlink/contracts/src/v0.6/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.6/interfaces/BlockHashStoreInterface.sol";
 
-import "@chainlink/contracts/src/v0.6/VRF.sol";
+import "./VRF.sol";
 import "@chainlink/contracts/src/v0.6/VRFRequestIDBase.sol";
 import "@nomiclabs/buidler/console.sol";
+
+interface BlockHashStoreInterface {
+    function getBlockhash(uint256 number) external view returns (bytes32);
+}
 
 /**
  * @title VRFCoordinator coordinates on-chain verifiable-randomness requests

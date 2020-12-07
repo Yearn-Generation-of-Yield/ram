@@ -392,7 +392,6 @@ contract ERC721 is
 
         _tokenOwners.set(tokenId, to);
 
-        console.log("minting", tokenId, to, _holderTokens[to].length());
         emit Transfer(address(0), to, tokenId);
     }
 

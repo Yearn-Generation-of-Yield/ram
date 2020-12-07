@@ -7,6 +7,7 @@ const RAM = artifacts.require("RAM");
 const RAMVAULT = artifacts.require("RAMVault");
 const Token = artifacts.require("Token");
 const UniV2Pair = artifacts.require("UniswapV2Pair");
+const ChainLinkToken = artifacts.require("ChainLinkToken");
 const Governance = artifacts.require("Governance");
 const FeeApprover = artifacts.require("FeeApprover");
 
@@ -38,8 +39,8 @@ contract("UniRAMRouter", (accounts) => {
   });
 
   it("should be able to add liquidity with only eth", async () => {
-    this.weth.approve(this.RAMRouter, MAX_INT, { from: testAccount2 });
-    this.weth.deposit({ value: 20e18, from: testAccount2 });
+    // await this.weth.approve(this.RAMRouter, MAX_INT, { from: testAccount2 });
+    await this.weth.deposit({ value: 20e18, from: testAccount2 });
     truffleAssert.passes(await this.RAMRouter.addLiquidityETHOnly(testAccount2, false, { from: testAccount2, value: (1e18).toString() }));
 
     assert.isTrue((await this.YGYRAMPair.balanceOf(testAccount2)).gt(0));
@@ -139,24 +140,28 @@ contract("UniRAMRouter", (accounts) => {
 
   it("RAM Router: should mint LINK NFT to user", async () => {
     const LINKNFT = await this.RAMRouter._NFTs(7);
+    truffleAssert.passes(await this.LINKToken.transfer(testAccount2, web3.utils.toWei("20"), { from: setterAccount }));
+    truffleAssert.passes(await this.LINKToken.approve(this.RAMRouter.address, web3.utils.toWei("21"), { from: testAccount2 }));
     truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
     const balance = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
     balance.should.be.equal(1);
   });
 
   // works
-  it.skip("RAM Router: should mint LINK NFT to user, but not twice", async () => {
+  it("RAM Router: should mint LINK NFT to user, but not twice", async () => {
     const LINKNFT = await this.RAMRouter._NFTs(7);
+    await this.LINKToken.transfer(testAccount2, web3.utils.toWei("202"), { from: setterAccount });
+    await this.LINKToken.approve(this.RAMRouter.address, web3.utils.toWei("212"), { from: testAccount2 });
     truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
     const balance = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
     balance.should.be.equal(1);
-    truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(24242, { from: testAccount2 }));
+    truffleAssert.passes(await this.RAMRouter.selfRequestRandomNumber(2424222, { from: testAccount2 }));
     const balanceAfter = Number(await this.nftFactory.balanceOf(LINKNFT, testAccount2));
     balanceAfter.should.be.equal(1);
   });
 
   // works
-  it.skip("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
+  it("RAM vault: claims rewards, distributes ygy, dev fund", async () => {
     // Add a new pool
     truffleAssert.passes(await this.RAMvault.add(100, this.YGYRAMPair.address, true, { from: setterAccount }));
 
