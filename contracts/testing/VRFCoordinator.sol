@@ -1,11 +1,11 @@
 pragma solidity ^0.6.6;
 
-import "@chainlink/contracts/src/v0.6/vendor/SafeMathChainlink.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import "@chainlink/contracts/src/v0.6/interfaces/LinkTokenInterface.sol";
 import "@chainlink/contracts/src/v0.6/VRFRequestIDBase.sol";
 import "./VRF.sol";
-import "./VRFConsumerBase.sol";
+import "../VRFConsumerBase.sol";
 import "hardhat/console.sol";
 
 interface BlockHashStoreInterface {
@@ -17,7 +17,7 @@ interface BlockHashStoreInterface {
  * @title with off-chain responses
  */
 contract VRFCoordinator is VRF, VRFRequestIDBase {
-    using SafeMathChainlink for uint256;
+    using SafeMath for uint256;
 
     LinkTokenInterface internal LINK;
     BlockHashStoreInterface internal blockHashStore;

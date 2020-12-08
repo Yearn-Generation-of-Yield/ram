@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./ERC721.sol";
-import "hardhat/console.sol";
 import "./YGYStorageV1.sol";
+import "hardhat/console.sol";
 
-contract NFT is ERC721, AccessControl {
+contract NFT is ERC721, AccessControlUpgradeSafe {
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     uint256 contractId;
+
     // Tradeable?
     bool allowTrade;
 
@@ -20,6 +21,8 @@ contract NFT is ERC721, AccessControl {
 
     // Props for unique token
     mapping(uint256 => YGYStorageV1.NFTProperty) public properties;
+
+    // How many choices available for this particular NFT
     uint256 propertyChoices;
 
     constructor(
@@ -42,6 +45,22 @@ contract NFT is ERC721, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, _superAdmin);
         _setupRole(SYSTEM_ROLE, _msgSender());
         _setupRole(SYSTEM_ROLE, _superAdmin);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 poolId
+    ) public virtual override {
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "ERC721: transfer caller is not owner nor approved"
+        );
+        _safeTransfer(from, to, tokenId, poolId);
     }
 
     /**
@@ -85,6 +104,14 @@ contract NFT is ERC721, AccessControl {
         // Finally, set the property.
         properties[tokenId] = YGYStorageV1.NFTProperty(pType, pValue, extra);
         return tokenId;
+    }
+
+    function getTokenProperty(uint256 _tokenId)
+        public
+        view
+        returns (YGYStorageV1.NFTProperty memory)
+    {
+        return properties[_tokenId];
     }
 
     /**

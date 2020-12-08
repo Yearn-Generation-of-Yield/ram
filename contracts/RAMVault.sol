@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 // import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 // import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
 // import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-// import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
+import "./interfaces/IERC721Receiver.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
 import "./YGYStorageV1.sol";
-import "./libraries/YGYHelper.sol";
+import "./libraries/Bytes.sol";
 import "./libraries/PoolHelper.sol";
 import "./libraries/UserHelper.sol";
+import "./NFT.sol";
 import "hardhat/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
-contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
+contract RAMVault is OwnableUpgradeSafe, YGYStorageV1, IERC721Receiver {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Bytes for bytes;
     using UserHelper for UserInfo;
     using PoolHelper for PoolInfo;
 
@@ -53,6 +57,36 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
         _storage = YGYStorageV1(_storageAddr);
         storageAddr = _storageAddr;
         _superAdmin = superAdmin;
+    }
+
+    function onERC721Received(
+        address _caller,
+        address _previousOwner,
+        uint256 _tokenId,
+        uint256 _poolId,
+        address _contractAddress
+    ) external override returns (bytes4) {
+        address nftAddress = _storage.getNFTAddress(uint256(_contractAddress));
+        NFT nft = NFT(nftAddress);
+        NFTProperty memory properties = nft.getTokenProperty(_tokenId);
+        string memory pType = properties.pType;
+        UserInfo storage user = userInfo[_poolId][_previousOwner];
+        PoolInfo storage pool = poolInfo[_poolId];
+        if (keccak256(abi.encodePacked(pType)) == keccak256("selfBoost")) {
+            user.adjustEffectiveStake(
+                pool,
+                user.boostLevel,
+                false,
+                properties.pValue,
+                _storage
+            );
+        }
+        return
+            bytes4(
+                keccak256(
+                    "onERC721Received(address,address,uint256,uin256,address)"
+                )
+            );
     }
 
     // --------------------------------------------
@@ -217,7 +251,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
             if (user.boostLevel > 0) {
-                user.adjustEffectiveStake(pool, 0, false, _storage);
+                user.adjustEffectiveStake(pool, 0, false, 0, _storage);
             }
         }
 
@@ -252,7 +286,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
             if (user.boostLevel > 0) {
-                user.adjustEffectiveStake(pool, 0, false, _storage);
+                user.adjustEffectiveStake(pool, 0, false, 0, _storage);
             }
         }
 
@@ -315,7 +349,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
 
             // Users who have bought multipliers will have their accounting balances readjusted.
             if (user.boostLevel > 0) {
-                user.adjustEffectiveStake(pool, 0, true, _storage);
+                user.adjustEffectiveStake(pool, 0, true, 0, _storage);
             }
         }
 
@@ -379,7 +413,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1 {
         // If user has staked balances, then set their new accounting balance
         if (user.amount > 0) {
             // Get the new multiplier
-            user.adjustEffectiveStake(pool, _level, false, _storage);
+            user.adjustEffectiveStake(pool, _level, false, 0, _storage);
         }
 
         boostFees = boostFees.add(finalCost);

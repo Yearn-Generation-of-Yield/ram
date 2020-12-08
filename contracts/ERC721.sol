@@ -2,32 +2,60 @@
 
 pragma solidity ^0.6.0;
 
-import "@openzeppelin/contracts/GSN/Context.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts/introspection/ERC165.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/EnumerableMap.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
+// import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Metadata.sol";
+// import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Enumerable.sol";
+// import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/introspection/ERC165.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableMap.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Counters.sol";
+import "./interfaces/IERC721Receiver.sol";
+import "./interfaces/IERC721.sol";
+import "./libraries/AddressERC721.sol";
 import "hardhat/console.sol";
+
+/**
+ * @title ERC-721 Non-Fungible Token Standard, optional metadata extension
+ * @dev See https://eips.ethereum.org/EIPS/eip-721
+ */
+interface IERC721Metadata is IERC721 {
+    function name() external view returns (string memory);
+
+    function symbol() external view returns (string memory);
+
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+}
+
+/**
+ * @title ERC-721 Non-Fungible Token Standard, optional enumeration extension
+ * @dev See https://eips.ethereum.org/EIPS/eip-721
+ */
+interface IERC721Enumerable is IERC721 {
+    function totalSupply() external view returns (uint256);
+
+    function tokenOfOwnerByIndex(address owner, uint256 index)
+        external
+        view
+        returns (uint256 tokenId);
+
+    function tokenByIndex(uint256 index) external view returns (uint256);
+}
 
 /**
  * @title ERC721 Non-Fungible Token Standard basic implementation
  * @dev Removed and added funtionality needed from the original.
  */
 contract ERC721 is
-    Context,
-    ERC165,
+    ContextUpgradeSafe,
+    ERC165UpgradeSafe,
     IERC721,
     IERC721Metadata,
     IERC721Enumerable
 {
     using SafeMath for uint256;
-    using Address for address;
+    using AddressERC721 for address;
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableMap for EnumerableMap.UintToAddressMap;
     using Strings for uint256;
@@ -35,9 +63,11 @@ contract ERC721 is
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdTracker;
 
-    // Equals to `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+    // Equals to `bytes4(keccak256("onERC721Received(address,address,uint256,uint256,address)"))`
     // which can be also obtained as `IERC721Receiver(0).onERC721Received.selector`
-    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
+    bytes4 private constant _ERC721_RECEIVED = bytes4(
+        keccak256("onERC721Received(address,address,uint256,uint256,address)")
+    );
 
     // Mapping from holder address to their (enumerable) set of owned tokens
     mapping(address => EnumerableSet.UintSet) private _holderTokens;
@@ -249,7 +279,7 @@ contract ERC721 is
         address to,
         uint256 tokenId
     ) public virtual override {
-        safeTransferFrom(from, to, tokenId, "");
+        safeTransferFrom(from, to, tokenId, 0);
     }
 
     /**
@@ -259,13 +289,13 @@ contract ERC721 is
         address from,
         address to,
         uint256 tokenId,
-        bytes memory _data
+        uint256 poolId
     ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: transfer caller is not owner nor approved"
         );
-        _safeTransfer(from, to, tokenId, _data);
+        _safeTransfer(from, to, tokenId, poolId);
     }
 
     /**
@@ -290,11 +320,11 @@ contract ERC721 is
         address from,
         address to,
         uint256 tokenId,
-        bytes memory _data
+        uint256 poolId
     ) internal virtual {
         _transfer(from, to, tokenId);
         require(
-            _checkOnERC721Received(from, to, tokenId, _data),
+            _checkOnERC721Received(from, to, tokenId, poolId),
             "ERC721: transfer to non ERC721Receiver implementer"
         );
     }
@@ -358,7 +388,7 @@ contract ERC721 is
     ) internal virtual {
         _mint(to, tokenId);
         require(
-            _checkOnERC721Received(address(0), to, tokenId, _data),
+            _checkOnERC721Received(address(0), to, tokenId, 0),
             "ERC721: transfer to non ERC721Receiver implementer"
         );
     }
@@ -458,14 +488,14 @@ contract ERC721 is
      * @param from address representing the previous owner of the given token ID
      * @param to target address that will receive the tokens
      * @param tokenId uint256 ID of the token to be transferred
-     * @param _data bytes optional data to send along with the call
+     * @param poolId poolId to target
      * @return bool whether the call correctly returned the expected magic value
      */
     function _checkOnERC721Received(
         address from,
         address to,
         uint256 tokenId,
-        bytes memory _data
+        uint256 poolId
     ) private returns (bool) {
         if (!to.isContract()) {
             return true;
@@ -476,7 +506,8 @@ contract ERC721 is
                 _msgSender(),
                 from,
                 tokenId,
-                _data
+                poolId,
+                address(this)
             ),
             "ERC721: transfer to non ERC721Receiver implementer"
         );

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
-import "./uniswapv2/interfaces/IWETH.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "./VRFConsumerBase.sol";
 import "./uniswapv2/libraries/Math.sol";
 import "./uniswapv2/libraries/UniswapV2Library.sol";
 import "./interfaces/INFT.sol";
@@ -12,18 +12,14 @@ import "./interfaces/INFTFactory.sol";
 import "./interfaces/IFeeApprover.sol";
 import "./interfaces/IRAMVault.sol";
 import "./NFT.sol";
+import "./YGYStorageV1.sol";
 
 // This contract is supposed to streamline liquidity additions
 // By allowing people to put in any amount of ETH or YGY and get LP tokens back
-contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
-    // RAM protocol variables
-    address public _RAMToken;
-    address public _YGYRAMPair;
-    address public _YGYToken;
-    address public _YGYWETHPair;
+contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
+    // RAM protocol variable
     IFeeApprover public _feeApprover;
     IRAMVault public _RAMVault;
-    IWETH public _WETH;
     address public _uniV2Factory;
 
     // Governance and regenerator tax
@@ -41,39 +37,15 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public rngLinkFee;
     bytes32 internal keyHash;
 
-    // Lottery tracking
-    struct LotteryTicket {
-        address owner;
-        uint256 levelOneChance;
-        uint256 levelTwoChance;
-        uint256 levelThreeChance;
-        uint256 levelFourChance;
-        uint256 levelFiveChance;
-    }
-    uint256 public ticketCount;
-    mapping(uint256 => LotteryTicket) public tickets;
-    mapping(address => uint256) public liquidityContributedEthValue;
-    mapping(address => uint256) public lastTicketLevel; // Mapping of (user => last ticket level)
-
     // NFT
     INFTFactory public _NFTFactory;
-    mapping(uint256 => address) public _NFTs; // Mapping of (level number => NFT address)
-    IERC20 public _dXIOTToken;
 
     constructor(
-        address RAMToken,
-        address YGYToken,
-        address WETH,
         address uniV2Factory,
-        address YGYRAMPair,
-        address YGYWethPair,
         address feeApprover,
         address RAMVault,
         address nftFactory,
-        address[] memory nfts,
         address payable _regenerator,
-        address dXIOTToken,
-        // stack prolly too deep so update hard code for test/mainnnetts
         address linkAddr,
         address vrfAddr
     )
@@ -83,23 +55,12 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase {
             linkAddr // LINK Token (KOVAN) 0xa36085F69e2889c224210F603D836748e7dC0088
         )
     {
-        _RAMToken = RAMToken;
-        _YGYToken = YGYToken;
-        _WETH = IWETH(WETH);
         _uniV2Factory = uniV2Factory;
         _feeApprover = IFeeApprover(feeApprover);
-        _YGYRAMPair = YGYRAMPair;
-        _YGYWETHPair = YGYWethPair;
         _RAMVault = IRAMVault(RAMVault);
-        regenerator = _regenerator;
-        _dXIOTToken = IERC20(dXIOTToken);
-        refreshApproval();
-
         _NFTFactory = INFTFactory(nftFactory);
-        for (uint256 i = 0; i < nfts.length; i++) {
-            _NFTs[i + 1] = nfts[i];
-        }
-
+        regenerator = _regenerator;
+        refreshApproval();
         // TODO: Update to mainnet variables
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
         rngLinkFee = 0.1 * 10**18;
