@@ -5,13 +5,23 @@ pragma experimental ABIEncoderV2;
 /**
 Storage contract for the YGY system
 */
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/INBUNIERC20.sol";
+import "./uniswapv2/interfaces/IWETH.sol";
 
-contract YGYStorageV1 is OwnableUpgradeSafe {
+contract YGYStorageV1 is AccessControlUpgradeSafe {
+    /* STORAGE CONFIG */
     using SafeMath for uint256;
+
+    bytes32 public constant MODIFIER_ROLE = keccak256("MODIFIER_ROLE");
+
+    function initialize() public initializer {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()));
+        _setupRole(MODIFIER_ROLE, _msgSender());
+    }
+
     /* RAMVAULT */
 
     // User properties per vault/pool.
@@ -22,33 +32,11 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         uint256 boostAmount;
         uint256 boostLevel;
         uint256 spentMultiplierTokens;
+        bool hasNFTBoostApplied;
     }
 
     // Pool/Vault-id -> userrAddress -> userInfo
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
-
-    function getUserInfo(uint256 _poolId, address _user)
-        external
-        view
-        returns (
-            uint256 amount,
-            uint256 rewardDebt,
-            uint256 rewardDebtYGY,
-            uint256 boostAmount,
-            uint256 boostLevel,
-            uint256 spentMultiplierTokens
-        )
-    {
-        UserInfo memory user = userInfo[_poolId][_user];
-        return (
-            user.amount,
-            user.rewardDebt,
-            user.rewardDebtYGY,
-            user.boostAmount,
-            user.boostLevel,
-            user.spentMultiplierTokens
-        );
-    }
 
     // Pool properties
     struct PoolInfo {
@@ -86,14 +74,6 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         );
     }
 
-    // TOKENS
-    INBUNIERC20 public ram; // The RAM token
-    IERC20 public ygy; // The YGY token
-    address public _YGYRAMPair;
-    address public _YGYToken;
-    address public _YGYWETHPair;
-    IERC20 public _dXIOTToken;
-
     // Total allocattion points for the whole contract
     uint256 public totalAllocPoint;
 
@@ -120,12 +100,23 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     address public regeneratoraddr;
     address public teamaddr;
 
+    // TOKENS
+    INBUNIERC20 public ram; // The RAM token
+    IERC20 public ygy; // The YGY token
+    address public _YGYRAMPair;
+    address public _YGYToken;
+    address public _YGYWETHPair;
+    address public _RAMToken;
+    IERC20 public _dXIOTToken;
+    IWETH public _WETH;
+
     function initializeRAMVault(
         address _ram,
         address _ygy,
         address _teamaddr,
         address _regeneratoraddr
     ) external initializer {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
         ram = INBUNIERC20(_ram);
         ygy = IERC20(_ygy);
         teamaddr = _teamaddr;
@@ -140,6 +131,27 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         boostLevelMultipliers[2] = 15; // 15%
         boostLevelMultipliers[3] = 30; // 30%
         boostLevelMultipliers[4] = 60; // 60%
+    }
+
+    function setTokens(
+        address RAMToken,
+        address YGYToken,
+        address WETH,
+        address YGYRAMPair,
+        address YGYWethPair,
+        address[] memory nfts,
+        address dXIOTToken
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        _RAMToken = RAMToken;
+        _YGYToken = YGYToken;
+        _WETH = IWETH(WETH);
+        _YGYRAMPair = YGYRAMPair;
+        _YGYWETHPair = YGYWethPair;
+        _dXIOTToken = IERC20(dXIOTToken);
+        for (uint256 i = 0; i < nfts.length; i++) {
+            _NFTs[i + 1] = nfts[i];
+        }
     }
 
     // Boosts
@@ -189,7 +201,8 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     function updateBoosts(
         uint256[] memory _boostMultipliers,
         uint256[] memory _boostCosts
-    ) public onlyOwner {
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
         // Update boost costs
         for (uint8 i; i <= _boostMultipliers.length; i++) {
             boostLevelCosts[i + 1] = _boostCosts[i];
@@ -205,7 +218,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     }
 
     /*
-         ROUTEER
+         ROUTER
     */
 
     // Lottery tracking
@@ -226,14 +239,15 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
 
     // NFT STUFF
     mapping(uint256 => address) public _NFTs; // Mapping of (level number => NFT address)
-    // Properties per NFT, not per uniqueId.
+
+    // Property object, extra field for arbirtrary values in futurer
     struct NFTProperty {
         string pType;
         uint256 pValue;
-        bytes32 extra; // for something, dunno yet;
+        bytes32 extra;
     }
 
-    mapping(address => NFTProperty[]) public nftProperties;
+    mapping(address => NFTProperty[]) public nftPropertyChoices;
 
     function getNFTAddress(uint256 _contractId)
         external
@@ -253,7 +267,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         )
     {
         address NFTAddress = _NFTs[_contractId];
-        NFTProperty memory properties = nftProperties[NFTAddress][_index];
+        NFTProperty memory properties = nftPropertyChoices[NFTAddress][_index];
 
         return (properties.pType, properties.pValue, properties.extra);
     }
@@ -264,7 +278,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         returns (uint256)
     {
         address NFTAddress = _NFTs[_contractId];
-        NFTProperty[] memory properties = nftProperties[NFTAddress];
+        NFTProperty[] memory properties = nftPropertyChoices[NFTAddress];
         return properties.length;
     }
 

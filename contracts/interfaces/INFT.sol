@@ -4,11 +4,6 @@ pragma solidity ^0.6.0;
 interface INFT {
     function mint(address _to) external returns (uint256);
 
-    // function undelegate(address _who, uint256 _tokenId) external;
-
-    // function delegate(address _to) external returns (uint256);
-
-    // function hasDelegation(address _who) external view returns (bool);
     function totalSupply() external view returns (uint256);
 
     function _tokenURI() external view returns (string memory);

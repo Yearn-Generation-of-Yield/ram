@@ -4,8 +4,8 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "./interfaces/INBUNIERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "./interfaces/IFeeApprover.sol";
 import "./interfaces/IRAMVault.sol";
 import "hardhat/console.sol";

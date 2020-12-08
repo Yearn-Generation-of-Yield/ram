@@ -2,7 +2,6 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "../YGYStorageV1.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 
 library UserHelper {
     using SafeMath for uint256;
@@ -60,6 +59,7 @@ library UserHelper {
         YGYStorageV1.PoolInfo storage _pool,
         uint256 _newLevel,
         bool _isWithdraw,
+        uint256 _nftBoost,
         YGYStorageV1 _storage
     ) internal {
         uint256 prevBalancesAccounting = self.boostAmount;
@@ -69,6 +69,12 @@ library UserHelper {
             _newLevel > 0 ? _newLevel : self.boostLevel,
             _storage
         );
+
+        if (_nftBoost > 0) {
+            accTotalMultiplier = accTotalMultiplier.add(_nftBoost);
+            self.hasNFTBoostApplied = true;
+        }
+
         uint256 newBalancesAccounting = self.amount.mul(accTotalMultiplier).div(
             100
         );
