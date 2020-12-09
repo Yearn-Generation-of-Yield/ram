@@ -18,6 +18,7 @@ import "hardhat/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
 contract RAMVault is OwnableUpgradeSafe, YGYStorageV1, IERC721Receiver {
+    address implSlot;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Bytes for bytes;
@@ -75,7 +76,7 @@ contract RAMVault is OwnableUpgradeSafe, YGYStorageV1, IERC721Receiver {
         if (keccak256(abi.encodePacked(pType)) == keccak256("selfBoost")) {
             user.adjustEffectiveStake(
                 pool,
-                user.boostLevel,
+                0,
                 false,
                 properties.pValue,
                 _storage
