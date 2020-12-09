@@ -1,5 +1,6 @@
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-typechain";
 import "hardhat-contract-sizer";
 import "hardhat-deploy-ethers";
 import "hardhat-deploy";
@@ -45,6 +46,10 @@ module.exports = {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
+  },
+  typechain: {
+    outDir: "./types",
+    target: "ethers-v5",
   },
   preprocess: {
     eachLine: removeConsoleLog((bre) => bre.network.name !== "hardhat" && bre.network.name !== "localhost"),

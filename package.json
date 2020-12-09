@@ -9,6 +9,8 @@
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^3.3.0",
     "@openzeppelin/hardhat-upgrades": "^1.4.2",
+    "@typechain/ethers-v5": "^5.0.0",
+    "@typechain/web3-v1": "^2.0.0",
     "@types/chai": "^4.2.14",
     "@types/mocha": "^8.0.4",
     "@types/node": "^14.14.10",
@@ -22,7 +24,9 @@
     "hardhat-deploy": "^0.7.0-beta.35",
     "hardhat-deploy-ethers": "^0.3.0-beta.7",
     "hardhat-preprocessor": "^0.1.1",
+    "hardhat-typechain": "^0.3.3",
     "ts-node": "^9.1.0",
+    "typechain": "^4.0.1",
     "typescript": "^4.1.2"
   }
 }
