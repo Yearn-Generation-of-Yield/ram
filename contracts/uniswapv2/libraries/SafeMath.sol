@@ -8,9 +8,7 @@ library SafeMathUniswap {
         require((z = x + y) >= x, "ds-math-add-overflow");
     }
 
-    function sub(uint256 x, uint256 y) internal view returns (uint256 z) {
-        console.log(x, y);
-
+    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x - y) <= x, "ds-math-sub-underflow");
     }
 

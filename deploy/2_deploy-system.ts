@@ -266,14 +266,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
   // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
-  await YGY.transfer(YGYWETHAddr, parseEther("500"));
-  await WETH.transfer(YGYWETHAddr, parseEther("50"));
+  await YGY.transfer(YGYWETHAddr, parseEther("5000"));
+  await WETH.transfer(YGYWETHAddr, parseEther("500"));
   await YGYWETHPair.mint(deployer);
+  await FeeApprover.sync();
 
   await YGY.transfer(YGYRAMAddr, parseEther("1000"));
-  await RAM.transfer(YGYRAMAddr, parseEther("1000"));
+  await RAM.transfer(YGYRAMAddr, parseEther("10000"));
 
   await YGYRAMPair.mint(deployer);
+  await FeeApprover.sync();
 
   await ChainLink.approve(RAMRouter.address, MAX_INT);
 

@@ -152,7 +152,6 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         IERC20 _token,
         bool _withdrawable
     ) public onlyOwner {
-        console.log(address(_storage));
         _storage.massUpdatePools();
         _storage.addPool(_allocPoint, _token, _withdrawable);
     }
@@ -251,8 +250,9 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         );
 
         // Pay the user
-        updateAndPayOutPending(_pid, _depositFor); // Update the balances of person that amount is being deposited for
+        updateAndPayOutPending(_pid, _depositFor);
 
+        // Update the balances of person that amount is being deposited for
         if (_amount > 0) {
             pool.token.transferFrom(msg.sender, address(this), _amount);
             user.amount = user.amount.add(_amount); // This is depositedFor address
@@ -264,7 +264,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         }
 
         user.updateDebts(pool);
-        _storage.updateUserInfo(_pid, msg.sender, user);
+        _storage.updateUserInfo(_pid, _depositFor, user);
         _storage.updatePoolInfo(_pid, pool);
         emit Deposit(_depositFor, _pid, _amount);
     }
@@ -313,15 +313,14 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         address to
     ) internal {
         YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(_pid, _storage);
-        require(pool.withdrawable);
+        require(pool.withdrawable, "Not withdrawable");
         YGYStorageV1.UserInfo memory user = UserHelper.getUser(
             _pid,
             from,
             _storage
         );
 
-        require(user.amount >= _amount);
-
+        require(user.amount >= _amount, "Withdraw amount exceeds balance");
         updateAndPayOutPending(_pid, from); // Update balances of from this is not withdrawal but claiming RAM farmed
 
         if (_amount > 0) {
@@ -489,8 +488,8 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         } else {
             _storage.ram().transfer(_to, _amount);
         }
-        _storage.setRAMBalance(_storage.ram().balanceOf(address(this)));
         transferRAMDevFee();
+        _storage.setRAMBalance(_storage.ram().balanceOf(address(this)));
     }
 
     function safeYgyTransfer(address _to, uint256 _amount) internal {

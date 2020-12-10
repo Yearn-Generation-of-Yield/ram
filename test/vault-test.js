@@ -36,20 +36,36 @@ describe("Vault", () => {
 
     await deployments.fixture();
     await setTestVars(this, ethers, deployments);
+    const endUsers = this.users.slice(4, this.users.length);
+    // Transfer some tokens for users
+    this.userBaseYGYBalance = parseEther("500");
+    this.userBaseRAMBalance = parseEther("200");
+    await Promise.all(
+      endUsers.map(async ({ address }) => {
+        await this.YGY.transfer(address, this.userBaseYGYBalance);
+        await this.RAM.transfer(address, this.userBaseRAMBalance);
+      })
+    );
+
+    // Just approve the vault and router here
+    await Promise.all(
+      endUsers.map(async ({ signer }) => {
+        await this.YGY.connect(signer).approve(this.RAMRouter.address, MAX_INT);
+        await this.YGYRAMPair.connect(signer).approve(this.RAMVault.address, MAX_INT);
+        await this.RAM.connect(signer).approve(this.RAMVault.address, MAX_INT);
+      })
+    );
   });
 
   it("should be able to add liquidity with only YGY", async () => {
     const user = this.users[4];
-    const YGYAmount = 100;
-    const DepositAmount = 10;
-    await this.YGY.connect(this.deployerSigner).transfer(user.address, this.parseEther(YGYAmount.toString())).should.be.fulfilled;
-    await this.YGY.connect(user.signer).approve(this.RAMRouter.address, MAX_INT).should.be.fulfilled;
+    const DepositAmount = 100;
     await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(this.parseEther(DepositAmount.toString()), false).should.be.fulfilled;
     const balanceOfUser = this.formatResult(await this.YGY.balanceOf(user.address));
-    balanceOfUser.should.be.equal(YGYAmount - DepositAmount);
+    balanceOfUser.should.be.equal(this.formatResult(this.userBaseYGYBalance) - DepositAmount);
 
     const YGYRAMBalanceOfUser = this.formatResult(await this.YGYRAMPair.balanceOf(user.address));
-    console.log("YGYRAMBalance with 10 YGY deposit: ", YGYRAMBalanceOfUser);
+    console.log("YGYRAMBalance with 100 YGY deposit: ", YGYRAMBalanceOfUser);
     YGYRAMBalanceOfUser.should.be.greaterThan(0);
   });
 
@@ -64,30 +80,69 @@ describe("Vault", () => {
   });
 
   it("RAM vault: YGY->RAM pool deposit and withdraw", async () => {
-    const depositAmount = "5";
-
     const user = this.users[4];
     const user2 = this.users[5];
 
-    await this.YGY.transfer(user2.address, parseEther("500"));
-
     // Add a new pool
     await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
-    // Approve YGY for user2 to Router.
-    await this.YGY.connect(user2.signer).approve(this.RAMRouter.address, MAX_INT);
 
     // Add liquiditiess.
     await this.RAMRouter.connect(user2.signer).addLiquidityYGYOnly(parseEther("100"), true);
-    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: parseEther("20") });
+    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: parseEther("1") });
 
-    // Approve RAM LP to Router
-    await this.YGYRAMPair.connect(user.signer).approve(this.RAMVault.address, MAX_INT);
-    await this.YGYRAMPair.connect(user2.signer).approve(this.RAMVault.address, MAX_INT);
+    const user1LPBalance = await this.YGYRAMPair.balanceOf(user.address);
+    const user2LPBalance = await this.YGYRAMPair.balanceOf(user2.address);
 
     // Deposit
-    await this.RAMVault.connect(user.signer).deposit(0, parseEther(depositAmount));
-    await this.RAMVault.connect(user2.signer).deposit(0, parseEther(depositAmount));
-    await this.RAMVault.connect(user.signer).withdraw(0, parseEther(depositAmount));
-    await this.RAMVault.connect(user2.signer).withdraw(0, parseEther(depositAmount));
+    await this.RAMVault.connect(user.signer).deposit(0, user1LPBalance);
+    await this.RAMVault.connect(user.signer).withdraw(0, user1LPBalance);
+    await this.RAMVault.connect(user2.signer).withdraw(0, user2LPBalance);
+  });
+
+  it("RAM vault: YGY->RAM pool purchase boosts", async () => {
+    const user = this.users[4];
+    const user2 = this.users[5];
+
+    // Add a new pool
+    await this.RAMvault.add(100, this.YGYRAMPair.address, true);
+
+    await this.RAMRouter.addLiquidityETHOnly(user2.address, true, { value: parseEther("2") }).should.be.fulfilled;
+
+    // Approve and deposit
+    await this.YGYRAMPair.approve(this.RAMvault.address, (1 * 1e17).toString(), { from: testAccount2 });
+    truffleAssert.passes(await this.RAMvault.deposit(0, (1 * 1e17).toString(), { from: testAccount2 }));
+
+    const userBefore = await this.RAMvault.userInfo.call(0, testAccount2);
+    assert.isTrue(userBefore.boostLevel == 0);
+    assert.isTrue(userBefore.amount == 1e17);
+    assert.isTrue(userBefore.boostAmount == 0);
+
+    const poolBefore = await this.RAMvault.poolInfo.call(0);
+    assert.isTrue(poolBefore.effectiveAdditionalTokensFromBoosts == 0);
+
+    // Load testAccount2
+    await this.RAMToken.transfer(testAccount2, (5.8 * 1e18).toString(), { from: setterAccount });
+
+    // Approve RAM tokens and purchase boost
+    await this.RAMToken.approve(this.RAMvault.address, (5.8 * 1e18).toString(), { from: testAccount2 });
+    truffleAssert.passes(await this.RAMvault.purchase(0, 1, { from: testAccount2 }));
+
+    const userAfter = await this.RAMvault.userInfo.call(0, testAccount2);
+    assert.isTrue(userAfter.boostLevel == 1);
+    assert.isTrue(userAfter.amount == 1e17);
+    assert.isTrue(userAfter.boostAmount == 1e17 * 0.05);
+
+    const poolAfter = await this.RAMvault.poolInfo.call(0);
+    assert.isTrue(poolAfter.effectiveAdditionalTokensFromBoosts == 1e17 * 0.05);
+
+    truffleAssert.passes(await this.RAMvault.withdraw(0, (1e17).toString(), { from: testAccount2 }));
+
+    const userAfterWithdraw = await this.RAMvault.userInfo.call(0, testAccount2);
+    assert.isTrue(userAfterWithdraw.boostLevel == 1);
+    assert.isTrue(userAfterWithdraw.amount == 0);
+    assert.isTrue(userAfterWithdraw.boostAmount == 0);
+
+    const poolAfterWithdraw = await this.RAMvault.poolInfo.call(0);
+    assert.isTrue(poolAfterWithdraw.effectiveAdditionalTokensFromBoosts == 0);
   });
 });

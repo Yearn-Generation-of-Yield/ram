@@ -218,6 +218,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             _YGYToken,
             _RAMToken
         );
+
         IUniswapV2Pair(_YGYRAMPair).swap(
             _RAMToken == token0 ? outRAM : 0,
             _RAMToken == token1 ? outRAM : 0,
@@ -425,7 +426,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             if (randomResult <= ticket.levelFourChance) {
                 _NFTFactory.mint(INFT(_storage._NFTs(4)), ticket.owner);
             }
-            console.log("Should mint here?", ticket.levelFiveChance);
             if (randomResult <= ticket.levelFiveChance) {
                 _NFTFactory.mint(INFT(_storage._NFTs(5)), ticket.owner);
             }

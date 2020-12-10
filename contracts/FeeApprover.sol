@@ -22,9 +22,9 @@ contract FeeApprover is OwnableUpgradeSafe {
             ygyTokenAddress,
             ramTokenAddress
         );
-        feePercentX100 = 10;
+        feePercentX100 = 10; // 1%
         paused = true; // We start paused until sync post LGE happens.
-        _editNoFeeList(0xC5cacb708425961594B63eC171f4df27a9c0d8c9, true); // ramvault proxy
+        _editNoFeeList(0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f, true); // ramvault proxy
         _editNoFeeList(tokenUniswapPair, true);
         sync();
         minFinney = 5000;
@@ -128,10 +128,10 @@ contract FeeApprover is OwnableUpgradeSafe {
             transferToFeeDistributorAmount = 0;
             transferToAmount = amount;
         } else {
-            console.log("Normal fee transfer");
             transferToFeeDistributorAmount = amount.mul(feePercentX100).div(
                 1000
             );
+            console.log("Transfer fee: ", transferToFeeDistributorAmount);
             transferToAmount = amount.sub(transferToFeeDistributorAmount);
         }
     }
