@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "./interfaces/INBUNIERC20.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
 import "./libraries/PoolHelper.sol";
+import "hardhat/console.sol";
 
 contract YGYStorageV1 is AccessControlUpgradeSafe {
     /* STORAGE CONFIG */
@@ -19,8 +20,20 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
 
     bytes32 public constant MODIFIER_ROLE = keccak256("MODIFIER_ROLE");
 
+    function setModifierContracts(
+        address _vault,
+        address _router,
+        address _nftFactory
+    ) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Nono");
+        _setupRole(MODIFIER_ROLE, _vault);
+        _setupRole(MODIFIER_ROLE, _router);
+        _setupRole(MODIFIER_ROLE, _nftFactory);
+    }
+
     function init() external initializer {
         __AccessControl_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MODIFIER_ROLE, _msgSender());
     }
 
@@ -144,7 +157,7 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     }
 
     function addPendingRewards(uint256 _amount) external {
-        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        require(hasRole(MODIFIER_ROLE, _msgSender()), "Prohibited caller");
         pendingRewards = pendingRewards.add(_amount);
         rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
 
@@ -278,7 +291,11 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     IERC20 public _dXIOTToken;
 
     function initializeRAMVault() external {
-        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        require(
+            hasRole(MODIFIER_ROLE, _msgSender()) ||
+                hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Prohibited caller"
+        );
         RAMVaultStartBlock = block.number;
 
         boostLevelCosts[1] = 5 * 1e18; // 5 RAM tokens
@@ -300,7 +317,11 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         address[] memory nfts,
         address dXIOTToken
     ) external {
-        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        require(
+            hasRole(MODIFIER_ROLE, _msgSender()) ||
+                hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Prohibited caller"
+        );
         ram = INBUNIERC20(RAMToken);
         ygy = IERC20(YGYToken);
         _RAMToken = RAMToken;
@@ -421,7 +442,7 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     // Mapping of (level number => NFT address)
     mapping(uint256 => address) public _NFTs;
 
-    // Property object, extra field for arbirtrary values in futurer
+    // Property object, extra field for arbirtrary values in future
     struct NFTProperty {
         string pType;
         uint256 pValue;

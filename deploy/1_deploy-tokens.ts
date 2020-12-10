@@ -8,13 +8,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
 
   const { deployer } = await getNamedAccounts();
+
   //@ts-ignore
   const UNIFactory = await ethers.getContract("UniswapV2Factory");
 
-  const RAM = await deploy("RAM", {
+  await deploy("RAM", {
     from: deployer,
     log: true,
     args: [UNIFactory.address],
+  });
+
+  await deploy("ChainLinkToken", {
+    from: deployer,
+    log: true,
+    args: ["LINK", "LINK", parseEther("20000")],
   });
 
   // deploy testnet tokens
@@ -22,29 +29,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     log: true,
   });
+
   const weth = await ethers.getContractAt("WETH9", WETH.address);
   weth.deposit({ from: deployer, value: (5e18).toString() });
 
-  const YGY = await deploy("Token", {
+  await deploy("YGY", {
     from: deployer,
     log: true,
     args: ["YGY", "YGY", parseEther("20000")],
   });
 
-  await deploy("Token", {
+  await deploy("dXIOT", {
     from: deployer,
     log: true,
     args: ["dXIOT", "dXIOT", parseEther("20000")],
   });
-
-  const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
-  const pairtx2 = await UNIFactory.createPair(RAM.address, YGY.address, { from: deployer });
-
-  const txres = await pairtx1.wait();
-  const txres2 = await pairtx2.wait();
-
-  const YGYWETHAddr = txres.events[0].args[0];
-  const YGYRAMAddr = txres2.events[0].args[0];
 
   // const _LogicV1 = await deploy("LogicV1", {
   //   from: deployer,

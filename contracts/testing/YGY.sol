@@ -3,7 +3,7 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
 
-contract Token is ERC20PresetMinterPauser {
+contract YGY is ERC20PresetMinterPauser {
     constructor(
         string memory _name,
         string memory _symbol,

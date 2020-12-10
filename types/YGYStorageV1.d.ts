@@ -81,6 +81,7 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
     "setEpochRewards()": FunctionFragment;
     "setLastTicketLevel(address,uint256)": FunctionFragment;
     "setLiquidityContributedEthValue(address,uint256,bool)": FunctionFragment;
+    "setModifierContracts(address,address,address)": FunctionFragment;
     "setNFTPropertiesForContract(address,tuple[])": FunctionFragment;
     "setPool(uint256,uint256,bool)": FunctionFragment;
     "setPoolAllowance(uint256,address,address,uint256)": FunctionFragment;
@@ -312,6 +313,10 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "setLiquidityContributedEthValue",
     values: [string, BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setModifierContracts",
+    values: [string, string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "setNFTPropertiesForContract",
@@ -600,6 +605,10 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setLiquidityContributedEthValue",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setModifierContracts",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -1215,6 +1224,20 @@ export class YGYStorageV1 extends Contract {
       _spender: string,
       _amount: BigNumberish,
       _delete: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    setModifierContracts(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "setModifierContracts(address,address,address)"(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
@@ -2006,6 +2029,20 @@ export class YGYStorageV1 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
+  setModifierContracts(
+    _vault: string,
+    _router: string,
+    _nftFactory: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "setModifierContracts(address,address,address)"(
+    _vault: string,
+    _router: string,
+    _nftFactory: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
   setNFTPropertiesForContract(
     _contractAddress: string,
     _properties: { pType: string; pValue: BigNumberish; extra: BytesLike }[],
@@ -2794,6 +2831,20 @@ export class YGYStorageV1 extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    setModifierContracts(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "setModifierContracts(address,address,address)"(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     setNFTPropertiesForContract(
       _contractAddress: string,
       _properties: { pType: string; pValue: BigNumberish; extra: BytesLike }[],
@@ -3558,6 +3609,20 @@ export class YGYStorageV1 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
+    setModifierContracts(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "setModifierContracts(address,address,address)"(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     setNFTPropertiesForContract(
       _contractAddress: string,
       _properties: { pType: string; pValue: BigNumberish; extra: BytesLike }[],
@@ -4289,6 +4354,20 @@ export class YGYStorageV1 extends Contract {
       _spender: string,
       _amount: BigNumberish,
       _delete: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    setModifierContracts(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "setModifierContracts(address,address,address)"(
+      _vault: string,
+      _router: string,
+      _nftFactory: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 

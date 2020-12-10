@@ -48,10 +48,18 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         uint256 indexed level
     );
 
-    function initialize(address superAdmin) public initializer {
+    function initialize(
+        address __superAdmin,
+        address _regeneratoraddr,
+        address _devaddr,
+        address _teamaddr
+    ) public initializer {
         OwnableUpgradeSafe.__Ownable_init();
         DEV_FEE = 724;
-        _superAdmin = superAdmin;
+        _superAdmin = __superAdmin;
+        regeneratoraddr = _regeneratoraddr;
+        devaddr = _devaddr;
+        teamaddr = _teamaddr;
     }
 
     function onERC721Received(

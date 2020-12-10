@@ -33,7 +33,7 @@ interface RAMVaultInterface extends ethers.utils.Interface {
     "devaddr()": FunctionFragment;
     "distributeFees()": FunctionFragment;
     "emergencyWithdraw(uint256)": FunctionFragment;
-    "initialize(address)": FunctionFragment;
+    "initialize(address,address,address,address)": FunctionFragment;
     "newSuperAdmin(address)": FunctionFragment;
     "onERC721Received(address,address,uint256,uint256,address)": FunctionFragment;
     "owner()": FunctionFragment;
@@ -96,7 +96,10 @@ interface RAMVaultInterface extends ethers.utils.Interface {
     functionFragment: "emergencyWithdraw",
     values: [BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: "initialize", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "initialize",
+    values: [string, string, string, string]
+  ): string;
   encodeFunctionData(
     functionFragment: "newSuperAdmin",
     values: [string]
@@ -395,12 +398,18 @@ export class RAMVault extends Contract {
     ): Promise<ContractTransaction>;
 
     initialize(
-      superAdmin: string,
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "initialize(address)"(
-      superAdmin: string,
+    "initialize(address,address,address,address)"(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
@@ -680,12 +689,18 @@ export class RAMVault extends Contract {
   ): Promise<ContractTransaction>;
 
   initialize(
-    superAdmin: string,
+    __superAdmin: string,
+    _regeneratoraddr: string,
+    _devaddr: string,
+    _teamaddr: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "initialize(address)"(
-    superAdmin: string,
+  "initialize(address,address,address,address)"(
+    __superAdmin: string,
+    _regeneratoraddr: string,
+    _devaddr: string,
+    _teamaddr: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
@@ -961,10 +976,19 @@ export class RAMVault extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    initialize(superAdmin: string, overrides?: CallOverrides): Promise<void>;
+    initialize(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
-    "initialize(address)"(
-      superAdmin: string,
+    "initialize(address,address,address,address)"(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1277,10 +1301,19 @@ export class RAMVault extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    initialize(superAdmin: string, overrides?: Overrides): Promise<BigNumber>;
+    initialize(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
 
-    "initialize(address)"(
-      superAdmin: string,
+    "initialize(address,address,address,address)"(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
@@ -1558,12 +1591,18 @@ export class RAMVault extends Contract {
     ): Promise<PopulatedTransaction>;
 
     initialize(
-      superAdmin: string,
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "initialize(address)"(
-      superAdmin: string,
+    "initialize(address,address,address,address)"(
+      __superAdmin: string,
+      _regeneratoraddr: string,
+      _devaddr: string,
+      _teamaddr: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 

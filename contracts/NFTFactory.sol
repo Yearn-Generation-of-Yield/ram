@@ -19,6 +19,7 @@ contract NFTFactory is StorageState, OwnableUpgradeSafe {
     event NFTBurned(string tokenName, address from, uint256 tokenId);
 
     constructor(YGYStorageV1 __storage) public {
+        __Ownable_init();
         _storage = __storage;
     }
 

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "./StorageState.sol";
 
 contract VaultProxy is StorageState, OwnableUpgradeSafe {
-    address implementation;
+    address public implementation;
 
     function initialize(address _implementation, YGYStorageV1 __storage)
         external
@@ -20,7 +20,7 @@ contract VaultProxy is StorageState, OwnableUpgradeSafe {
         implementation = _implementation;
     }
 
-    function upgrade(address _implementattion, YGYStorageV1 __storage)
+    function upgrade(address _implementation, YGYStorageV1 __storage)
         external
         onlyOwner
     {

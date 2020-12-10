@@ -22,20 +22,57 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface VaultProxyInterface extends ethers.utils.Interface {
   functions: {
+    "implementation()": FunctionFragment;
     "initialize(address,address)": FunctionFragment;
-    "setOwner(address)": FunctionFragment;
+    "owner()": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
+    "upgrade(address,address)": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "implementation",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "initialize",
     values: [string, string]
   ): string;
-  encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "upgrade",
+    values: [string, string]
+  ): string;
 
+  decodeFunctionResult(
+    functionFragment: "implementation",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "upgrade", data: BytesLike): Result;
 
-  events: {};
+  events: {
+    "OwnershipTransferred(address,address)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
 }
 
 export class VaultProxy extends Contract {
@@ -52,6 +89,10 @@ export class VaultProxy extends Contract {
   interface: VaultProxyInterface;
 
   functions: {
+    implementation(overrides?: CallOverrides): Promise<[string]>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<[string]>;
+
     initialize(
       _implementation: string,
       __storage: string,
@@ -64,16 +105,40 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    setOwner(
-      _newOwner: string,
+    owner(overrides?: CallOverrides): Promise<[string]>;
+
+    "owner()"(overrides?: CallOverrides): Promise<[string]>;
+
+    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
+
+    "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
+
+    transferOwnership(
+      newOwner: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "setOwner(address)"(
-      _newOwner: string,
+    "transferOwnership(address)"(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    upgrade(
+      _implementation: string,
+      __storage: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "upgrade(address,address)"(
+      _implementation: string,
+      __storage: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
   };
+
+  implementation(overrides?: CallOverrides): Promise<string>;
+
+  "implementation()"(overrides?: CallOverrides): Promise<string>;
 
   initialize(
     _implementation: string,
@@ -87,17 +152,41 @@ export class VaultProxy extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  setOwner(
-    _newOwner: string,
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  "owner()"(overrides?: CallOverrides): Promise<string>;
+
+  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
+
+  "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
+
+  transferOwnership(
+    newOwner: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "setOwner(address)"(
-    _newOwner: string,
+  "transferOwnership(address)"(
+    newOwner: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  upgrade(
+    _implementation: string,
+    __storage: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "upgrade(address,address)"(
+    _implementation: string,
+    __storage: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
   callStatic: {
+    implementation(overrides?: CallOverrides): Promise<string>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<string>;
+
     initialize(
       _implementation: string,
       __storage: string,
@@ -110,17 +199,49 @@ export class VaultProxy extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setOwner(_newOwner: string, overrides?: CallOverrides): Promise<void>;
+    owner(overrides?: CallOverrides): Promise<string>;
 
-    "setOwner(address)"(
-      _newOwner: string,
+    "owner()"(overrides?: CallOverrides): Promise<string>;
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    "renounceOwnership()"(overrides?: CallOverrides): Promise<void>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "transferOwnership(address)"(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    upgrade(
+      _implementation: string,
+      __storage: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "upgrade(address,address)"(
+      _implementation: string,
+      __storage: string,
       overrides?: CallOverrides
     ): Promise<void>;
   };
 
-  filters: {};
+  filters: {
+    OwnershipTransferred(
+      previousOwner: string | null,
+      newOwner: string | null
+    ): EventFilter;
+  };
 
   estimateGas: {
+    implementation(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<BigNumber>;
+
     initialize(
       _implementation: string,
       __storage: string,
@@ -133,15 +254,44 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    setOwner(_newOwner: string, overrides?: Overrides): Promise<BigNumber>;
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
 
-    "setOwner(address)"(
-      _newOwner: string,
+    "owner()"(overrides?: CallOverrides): Promise<BigNumber>;
+
+    renounceOwnership(overrides?: Overrides): Promise<BigNumber>;
+
+    "renounceOwnership()"(overrides?: Overrides): Promise<BigNumber>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "transferOwnership(address)"(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    upgrade(
+      _implementation: string,
+      __storage: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "upgrade(address,address)"(
+      _implementation: string,
+      __storage: string,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    implementation(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "implementation()"(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     initialize(
       _implementation: string,
       __storage: string,
@@ -154,13 +304,33 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    setOwner(
-      _newOwner: string,
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "owner()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>;
+
+    "renounceOwnership()"(overrides?: Overrides): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "setOwner(address)"(
-      _newOwner: string,
+    "transferOwnership(address)"(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    upgrade(
+      _implementation: string,
+      __storage: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "upgrade(address,address)"(
+      _implementation: string,
+      __storage: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };
