@@ -24,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // initialize the vault implementation
   const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address, deployerSigner);
-  await VaultProxy.initialize(RAMVAULT.address);
+  await VaultProxy.initialize(RAMVAULT.address, YGYStorage.address);
 
   // const _LogicV1 = await deploy("LogicV1", {
   //   from: deployer,

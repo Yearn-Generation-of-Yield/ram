@@ -1,6 +1,9 @@
 node_modules
 
 #Hardhat files
+bin
+artifacts
+types
 cache
 artifacts
 password.js
