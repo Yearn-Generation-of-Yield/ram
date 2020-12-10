@@ -110,10 +110,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     }
 
     function refreshApproval() public {
-        IUniswapV2Pair(_storage._YGYRAMPair()).approve(
-            address(_RAMVault),
-            uint256(-1)
-        );
+        IUniswapV2Pair(_YGYRAMPair).approve(address(_RAMVault), uint256(-1));
     }
 
     event FeeApproverChanged(
@@ -122,7 +119,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     );
 
     fallback() external payable {
-        if (msg.sender != address(_storage._WETH())) {
+        if (msg.sender != address(_WETH)) {
             addLiquidityETHOnly(msg.sender, false);
         }
     }
