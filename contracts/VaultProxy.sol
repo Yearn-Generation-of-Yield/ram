@@ -12,10 +12,6 @@ contract VaultProxy is StorageState, OwnableUpgradeSafe {
         initializer
     {
         __Ownable_init();
-        console.log(
-            "setting implementation and storage location",
-            _implementation
-        );
         _storage = __storage;
         implementation = _implementation;
     }
