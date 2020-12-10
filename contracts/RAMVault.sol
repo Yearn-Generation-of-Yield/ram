@@ -18,7 +18,6 @@ import "hardhat/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
 contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
-    using StorageLibrary for YGYStorageV1;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Bytes for bytes;
