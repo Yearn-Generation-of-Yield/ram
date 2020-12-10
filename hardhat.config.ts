@@ -2,8 +2,8 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-deploy-ethers";
-import "hardhat-typechain";
-import "hardhat-contract-sizer";
+// import "hardhat-typechain";
+// import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import { removeConsoleLog } from "hardhat-preprocessor";
 
@@ -33,6 +33,21 @@ module.exports = {
       1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
       4: "0xA296a3d5F026953e17F472B497eC29a5631FB51B", // but for rinkeby it will be a specific address
       goerli: "0x84b9514E013710b9dD0811c9Fe46b837a4A0d8E0", //it can also specify a specific netwotk name (specified in hardhat.config.js)
+    },
+    devaddr: {
+      default: 1,
+    },
+    teamaddr: {
+      default: 2,
+    },
+    regeneratoraddr: {
+      default: 3,
+    },
+    user1: {
+      default: 4,
+    },
+    user2: {
+      default: 5,
     },
   },
   paths: {

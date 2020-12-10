@@ -60,7 +60,7 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
-    uint256 public constant initialSupply = 10000e18; // 10k
+    uint256 public constant initialSupply = 1000000e18; // 10k
     uint256 public contractStartTimestamp;
 
     /**

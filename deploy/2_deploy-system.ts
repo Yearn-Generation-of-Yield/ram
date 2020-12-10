@@ -1,11 +1,13 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 const separator = () => console.log("-----------------------------------------");
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, getUnnamedAccounts, ethers } = hre;
-  const { deploy, execute } = deployments;
-  const { parseEther, formatEther } = ethers.utils;
+  const { deploy } = deployments;
+  const { parseEther } = ethers.utils;
 
   const { deployer } = await getNamedAccounts();
   const [, devAddr, teamAddr, regeneratorAddr] = await getUnnamedAccounts();
@@ -197,11 +199,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Initialized RAM vault values in storage");
   separator();
   // Deployed instance
-  const RAMvault = await ethers.getContractAt("RAMVault", RAMVAULT.address, deployerSigner);
+  const RAMVault = await ethers.getContractAt("RAMVault", RAMVAULT.address, deployerSigner);
 
   // Initialize addresses.
-  await RAMvault.initialize(deployer, regeneratorAddr, devAddr, teamAddr);
-  console.log("Initialized ram vault itself");
+  await RAMVault.initialize(deployer, regeneratorAddr, devAddr, teamAddr);
+  console.log("Initialized ram vault itself:", RAMVault.address);
   separator();
   // Deploy a proxy for Vault
   const VAULTPROXY = await deploy("VaultProxy", {
@@ -212,7 +214,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address, deployerSigner);
   await VaultProxy.initialize(RAMVAULT.address, YGYStorage.address);
-  console.log("Proxy initialized with implementation of vault at:", RAMVAULT.address);
+  console.log("Proxy initialized at", VaultProxy.address, "with implementation of vault at:", RAMVAULT.address);
   separator();
   /** FEEAPPROVER */
   const FEEAPPROVER = await deploy("FeeApprover", {
@@ -247,6 +249,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       VRF.address,
     ],
   });
+  console.log("RAMRouter at:", RAMROUTER.address);
   separator();
 
   await YGYStorage.setModifierContracts(VaultProxy.address, RAMROUTER.address, NFTFACTORY.address);
@@ -263,12 +266,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
   // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
-  await YGY.transfer(YGYWETHAddr, parseEther("1"));
-  await WETH.transfer(YGYWETHAddr, parseEther("1"));
+  await YGY.transfer(YGYWETHAddr, parseEther("500"));
+  await WETH.transfer(YGYWETHAddr, parseEther("50"));
   await YGYWETHPair.mint(deployer);
 
-  await YGY.transfer(YGYRAMAddr, parseEther("0.5"));
-  await RAM.transfer(YGYRAMAddr, parseEther("0.5"));
+  await YGY.transfer(YGYRAMAddr, parseEther("1000"));
+  await RAM.transfer(YGYRAMAddr, parseEther("1000"));
 
   await YGYRAMPair.mint(deployer);
 
@@ -289,6 +292,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   RAMRouter.setGovernance(GOVERNANCE.address);
   console.log("Governance set in RAMRouter at: ", GOVERNANCE.address);
+  separator();
+
+  const all = await deployments.all();
+  console.log("Deployment addresses");
+  for (const deployment in all) {
+    console.log(deployment, all[deployment].address);
+  }
   separator();
 };
 

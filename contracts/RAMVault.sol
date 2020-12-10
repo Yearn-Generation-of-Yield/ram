@@ -152,6 +152,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         IERC20 _token,
         bool _withdrawable
     ) public onlyOwner {
+        console.log(address(_storage));
         _storage.massUpdatePools();
         _storage.addPool(_allocPoint, _token, _withdrawable);
     }

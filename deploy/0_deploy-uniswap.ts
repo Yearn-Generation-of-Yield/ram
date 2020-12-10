@@ -6,11 +6,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
 
   const { deployer } = await getNamedAccounts();
-  await deploy("UniswapV2Factory", {
+  const UNI = await deploy("UniswapV2Factory", {
     from: deployer,
     log: true,
     args: [deployer],
   });
+  console.log("UNIFactory at:", UNI.address);
 };
 
 export default func;

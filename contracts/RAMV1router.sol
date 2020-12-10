@@ -229,7 +229,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
 
         // TODO: CHANGE TO TEH CORRECT ADDRESS
         _dXIOTToken.transferFrom(
-            0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4,
+            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,
             to,
             1 * 1e18
         );
@@ -538,7 +538,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 6) {
                 // Winning ticket (levels 1-5)
                 ticketCount++;
-                console.log(ticketCount);
                 tickets[ticketCount] = LotteryTicket({
                     owner: user,
                     levelOneChance: 100,
@@ -562,7 +561,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             // Add the ticket to the lottery
             if (ticket.owner != address(0)) {
                 ticketCount++;
-                console.log(ticketCount);
                 tickets[ticketCount] = ticket;
             }
         }

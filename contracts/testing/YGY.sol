@@ -2,6 +2,7 @@
 pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
+import "hardhat/console.sol";
 
 contract YGY is ERC20PresetMinterPauser {
     constructor(

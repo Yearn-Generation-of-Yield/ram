@@ -64,6 +64,7 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         (bool success, bytes memory data) = token.call(
             abi.encodeWithSelector(SELECTOR, to, value)
         );
+        console.log(success, abi.decode(data, (bool)));
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
             "UniswapV2: TRANSFER_FAILED"
