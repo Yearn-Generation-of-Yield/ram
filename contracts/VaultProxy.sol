@@ -4,18 +4,13 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "./StorageState.sol";
 
-contract VaultProxy is StorageState {
+contract VaultProxy is StorageState, OwnableUpgradeSafe {
     address implementation;
-    address owner;
-
-    constructor() public {
-        owner = msg.sender;
-    }
 
     function initialize(address _implementation, YGYStorageV1 __storage)
         external
+        onlyOwner
     {
-        require(msg.sender == owner);
         console.log(
             "setting implementation and storage location",
             _implementation
