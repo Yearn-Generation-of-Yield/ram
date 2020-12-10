@@ -61,7 +61,7 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
     "getRoleMemberCount(bytes32)": FunctionFragment;
     "grantRole(bytes32,address)": FunctionFragment;
     "hasRole(bytes32,address)": FunctionFragment;
-    "initialize()": FunctionFragment;
+    "init()": FunctionFragment;
     "initializeRAMVault()": FunctionFragment;
     "lastTicketLevel(address)": FunctionFragment;
     "liquidityContributedEthValue(address)": FunctionFragment;
@@ -239,10 +239,7 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
     functionFragment: "hasRole",
     values: [BytesLike, string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "initialize",
-    values?: undefined
-  ): string;
+  encodeFunctionData(functionFragment: "init", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "initializeRAMVault",
     values?: undefined
@@ -537,7 +534,7 @@ interface YGYStorageV1Interface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "grantRole", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasRole", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "init", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "initializeRAMVault",
     data: BytesLike
@@ -1024,9 +1021,9 @@ export class YGYStorageV1 extends Contract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    initialize(overrides?: Overrides): Promise<ContractTransaction>;
+    init(overrides?: Overrides): Promise<ContractTransaction>;
 
-    "initialize()"(overrides?: Overrides): Promise<ContractTransaction>;
+    "init()"(overrides?: Overrides): Promise<ContractTransaction>;
 
     initializeRAMVault(overrides?: Overrides): Promise<ContractTransaction>;
 
@@ -1815,9 +1812,9 @@ export class YGYStorageV1 extends Contract {
     overrides?: CallOverrides
   ): Promise<boolean>;
 
-  initialize(overrides?: Overrides): Promise<ContractTransaction>;
+  init(overrides?: Overrides): Promise<ContractTransaction>;
 
-  "initialize()"(overrides?: Overrides): Promise<ContractTransaction>;
+  "init()"(overrides?: Overrides): Promise<ContractTransaction>;
 
   initializeRAMVault(overrides?: Overrides): Promise<ContractTransaction>;
 
@@ -2604,9 +2601,9 @@ export class YGYStorageV1 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>;
 
-    initialize(overrides?: CallOverrides): Promise<void>;
+    init(overrides?: CallOverrides): Promise<void>;
 
-    "initialize()"(overrides?: CallOverrides): Promise<void>;
+    "init()"(overrides?: CallOverrides): Promise<void>;
 
     initializeRAMVault(overrides?: CallOverrides): Promise<void>;
 
@@ -3399,9 +3396,9 @@ export class YGYStorageV1 extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    initialize(overrides?: Overrides): Promise<BigNumber>;
+    init(overrides?: Overrides): Promise<BigNumber>;
 
-    "initialize()"(overrides?: Overrides): Promise<BigNumber>;
+    "init()"(overrides?: Overrides): Promise<BigNumber>;
 
     initializeRAMVault(overrides?: Overrides): Promise<BigNumber>;
 
@@ -4118,9 +4115,9 @@ export class YGYStorageV1 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    initialize(overrides?: Overrides): Promise<PopulatedTransaction>;
+    init(overrides?: Overrides): Promise<PopulatedTransaction>;
 
-    "initialize()"(overrides?: Overrides): Promise<PopulatedTransaction>;
+    "init()"(overrides?: Overrides): Promise<PopulatedTransaction>;
 
     initializeRAMVault(overrides?: Overrides): Promise<PopulatedTransaction>;
 

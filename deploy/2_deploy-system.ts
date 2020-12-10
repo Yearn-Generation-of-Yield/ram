@@ -8,9 +8,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const [deployerSigner] = await ethers.getSigners();
 
-  const YGYStorage = await deploy("YGYStorageV1", {
+  const YGYSTORAGE = await deploy("YGYStorageV1", {
     from: deployer,
   });
+
+  const YGYStorage = await ethers.getContractAt("YGYStorageV1", YGYSTORAGE.address, deployerSigner);
+
+  await YGYStorage.init();
 
   const RAMVAULT = await deploy("RAMVault", {
     from: deployer,

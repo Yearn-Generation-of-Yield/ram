@@ -19,8 +19,8 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
 
     bytes32 public constant MODIFIER_ROLE = keccak256("MODIFIER_ROLE");
 
-    function initialize() public initializer {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()));
+    function init() external initializer {
+        __AccessControl_init();
         _setupRole(MODIFIER_ROLE, _msgSender());
     }
 

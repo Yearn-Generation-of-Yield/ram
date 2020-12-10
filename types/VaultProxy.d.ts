@@ -23,41 +23,19 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 interface VaultProxyInterface extends ethers.utils.Interface {
   functions: {
     "initialize(address,address)": FunctionFragment;
-    "owner()": FunctionFragment;
-    "renounceOwnership()": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
+    "setOwner(address)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "initialize",
     values: [string, string]
   ): string;
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "renounceOwnership",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [string]
-  ): string;
+  encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
 
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "renounceOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
 
-  events: {
-    "OwnershipTransferred(address,address)": EventFragment;
-  };
-
-  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+  events: {};
 }
 
 export class VaultProxy extends Contract {
@@ -86,21 +64,13 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    owner(overrides?: CallOverrides): Promise<[string]>;
-
-    "owner()"(overrides?: CallOverrides): Promise<[string]>;
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
-
-    "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
-
-    transferOwnership(
-      newOwner: string,
+    setOwner(
+      _newOwner: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "transferOwnership(address)"(
-      newOwner: string,
+    "setOwner(address)"(
+      _newOwner: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
   };
@@ -117,21 +87,13 @@ export class VaultProxy extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  owner(overrides?: CallOverrides): Promise<string>;
-
-  "owner()"(overrides?: CallOverrides): Promise<string>;
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
-
-  "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
-
-  transferOwnership(
-    newOwner: string,
+  setOwner(
+    _newOwner: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "transferOwnership(address)"(
-    newOwner: string,
+  "setOwner(address)"(
+    _newOwner: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
@@ -148,31 +110,15 @@ export class VaultProxy extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    owner(overrides?: CallOverrides): Promise<string>;
+    setOwner(_newOwner: string, overrides?: CallOverrides): Promise<void>;
 
-    "owner()"(overrides?: CallOverrides): Promise<string>;
-
-    renounceOwnership(overrides?: CallOverrides): Promise<void>;
-
-    "renounceOwnership()"(overrides?: CallOverrides): Promise<void>;
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "transferOwnership(address)"(
-      newOwner: string,
+    "setOwner(address)"(
+      _newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>;
   };
 
-  filters: {
-    OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter;
-  };
+  filters: {};
 
   estimateGas: {
     initialize(
@@ -187,21 +133,10 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    owner(overrides?: CallOverrides): Promise<BigNumber>;
+    setOwner(_newOwner: string, overrides?: Overrides): Promise<BigNumber>;
 
-    "owner()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>;
-
-    "renounceOwnership()"(overrides?: Overrides): Promise<BigNumber>;
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "transferOwnership(address)"(
-      newOwner: string,
+    "setOwner(address)"(
+      _newOwner: string,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
@@ -219,21 +154,13 @@ export class VaultProxy extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "owner()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>;
-
-    "renounceOwnership()"(overrides?: Overrides): Promise<PopulatedTransaction>;
-
-    transferOwnership(
-      newOwner: string,
+    setOwner(
+      _newOwner: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "transferOwnership(address)"(
-      newOwner: string,
+    "setOwner(address)"(
+      _newOwner: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };
