@@ -131,7 +131,6 @@ contract FeeApprover is OwnableUpgradeSafe {
             transferToFeeDistributorAmount = amount.mul(feePercentX100).div(
                 1000
             );
-            console.log("Transfer fee: ", transferToFeeDistributorAmount);
             transferToAmount = amount.sub(transferToFeeDistributorAmount);
         }
     }

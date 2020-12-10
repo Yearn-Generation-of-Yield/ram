@@ -50,7 +50,7 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         bool hasNFTBoostApplied;
     }
 
-    // Pool/Vault-id -> userrAddress -> userInfo
+    // Pool/Vault/Whatever-id -> userrAddress -> userInfo
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
     function updateUserInfo(
@@ -128,32 +128,12 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         );
     }
 
-    function massUpdatePools() public {
-        uint256 allRewards;
-        uint256 allYGYRewards;
-        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
-            (uint256 ramWholeReward, uint256 ygyWholeReward) = updatePool(pid);
-            allRewards = allRewards.add(ramWholeReward);
-            allYGYRewards = allYGYRewards.add(ygyWholeReward);
-        }
-
-        pendingRewards = pendingRewards.sub(allRewards);
-        pendingYGYRewards = pendingYGYRewards.sub(allYGYRewards);
-    }
-
-    function updatePool(uint256 _pid)
-        public
-        returns (uint256 _ramRewardWhole, uint256 _ygyRewardWhole)
+    function updatePoolRewards(uint256 allRewards, uint256 allYGYRewards)
+        external
     {
         require(hasRole(MODIFIER_ROLE, _msgSender()));
-        PoolInfo storage pool = poolInfo[_pid];
-        // avoids division by 0 errors
-        if (pool.token.balanceOf(address(this)) == 0) {
-            return (0, 0);
-        }
-
-        // Get whole rewards for tokens
-        return pool.getWholeRewards(this);
+        pendingRewards = pendingRewards.sub(allRewards);
+        pendingYGYRewards = pendingYGYRewards.sub(allYGYRewards);
     }
 
     function addPendingRewards(uint256 _amount) external {

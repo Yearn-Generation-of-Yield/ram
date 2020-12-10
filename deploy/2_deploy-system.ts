@@ -9,8 +9,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { parseEther } = ethers.utils;
 
-  const { deployer } = await getNamedAccounts();
-  const [, devAddr, teamAddr, regeneratorAddr] = await getUnnamedAccounts();
+  const { deployer, devaddr, teamaddr, regeneratoraddr } = await getNamedAccounts();
   const [deployerSigner] = await ethers.getSigners();
 
   //@ts-ignore
@@ -194,18 +193,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
   separator();
+
   // just sets boost values for storage..
   YGYStorage.initializeRAMVault();
   console.log("Initialized RAM vault values in storage");
   separator();
-  // Deployed instance
-  const RAMVault = await ethers.getContractAt("RAMVault", RAMVAULT.address, deployerSigner);
 
-  // Initialize addresses.
-  await RAMVault.initialize(deployer, regeneratorAddr, devAddr, teamAddr);
-  console.log("Initialized ram vault itself:", RAMVault.address);
-  separator();
-  // Deploy a proxy for Vault
+  /* Deploy a proxy for Vault  */
   const VAULTPROXY = await deploy("VaultProxy", {
     from: deployer,
     log: true,
@@ -213,9 +207,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   separator();
 
   const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address, deployerSigner);
-  await VaultProxy.initialize(RAMVAULT.address, YGYStorage.address);
+  await VaultProxy.setup(RAMVAULT.address, YGYStorage.address);
   console.log("Proxy initialized at", VaultProxy.address, "with implementation of vault at:", RAMVAULT.address);
   separator();
+
+  // Deployed instance using proxy
+  const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
+  console.log("Addresses:", deployer, regeneratoraddr, devaddr, teamaddr);
+  await RAMVault.initialize(deployer, regeneratoraddr, devaddr, teamaddr);
+  console.log("Initialized ram vault itself through proxy.");
+  console.log("DEV:", devaddr, "TEAM", teamaddr, "regenerator", regeneratoraddr);
+  separator();
+
   /** FEEAPPROVER */
   const FEEAPPROVER = await deploy("FeeApprover", {
     from: deployer,
@@ -229,8 +232,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Now we can initialize the FeeApprover contract
   await FeeApprover.initialize(RAM.address, YGY.address, UNIFactory.address);
   console.log("FeeApprover initialized");
-  separator();
   await FeeApprover.setPaused(false);
+  separator();
 
   // Set tokens to storage
   await YGYStorage.setTokens(RAM.address, YGY.address, WETH.address, YGYRAMPair.address, YGYWETHPair.address, nfts, dXIOT.address);
@@ -243,7 +246,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       FEEAPPROVER.address,
       VAULTPROXY.address,
       NFTFACTORY.address,
-      regeneratorAddr,
+      regeneratoraddr,
       YGYSTORAGE.address,
       ChainLink.address,
       VRF.address,
@@ -260,11 +263,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await RAMRouter.setTokens();
   console.log("RAMRouter tokens set");
   separator();
+
   // Sets transferCheckerAddress() to deployer account
   await RAM.setShouldTransferChecker(FEEAPPROVER.address);
   await RAM.setFeeDistributor(VAULTPROXY.address);
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
+
   // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
   await YGY.transfer(YGYWETHAddr, parseEther("5000"));
   await WETH.transfer(YGYWETHAddr, parseEther("500"));

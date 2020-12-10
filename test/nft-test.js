@@ -8,7 +8,7 @@ const { setTestVars } = require("../scripts/setTestVars");
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 const { parseEther, formatEther } = ethers.utils;
 
-describe("Vault + Router", () => {
+describe("NFT", () => {
   beforeEach(async () => {
     this.formatResult = (amount) => Number(formatEther(amount));
     const { deployer, teamaddr, devaddr } = await getNamedAccounts();
@@ -16,6 +16,16 @@ describe("Vault + Router", () => {
     this.formatEther = formatEther;
     this.deployer = deployer;
     this.deployerSigner = await ethers.getSigner(deployer);
+
+    this.NFTLocations = {
+      RAM1: 0,
+      RAM2: 1,
+      RAM3: 2,
+      RAM4: 3,
+      RAM5: 4,
+      ROBOT: 5,
+      LINK: 6,
+    };
 
     this.users = [];
     const signers = await ethers.getSigners();

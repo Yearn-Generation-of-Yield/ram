@@ -2,18 +2,15 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-// import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-// import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
-// import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IERC721Receiver.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
-import "./StorageState.sol";
 import "./libraries/Bytes.sol";
 import "./libraries/PoolHelper.sol";
 import "./libraries/UserHelper.sol";
 import "./NFT.sol";
+import "./StorageState.sol";
 import "hardhat/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
@@ -23,10 +20,6 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
     using Bytes for bytes;
     using UserHelper for YGYStorageV1.UserInfo;
     using PoolHelper for YGYStorageV1.PoolInfo;
-
-    address public devaddr;
-    address public teamaddr;
-    address public regeneratoraddr;
 
     event RewardPaid(uint256 pid, address to);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -47,6 +40,10 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         uint256 indexed pid,
         uint256 indexed level
     );
+
+    address private devaddr;
+    address private teamaddr;
+    address private regeneratoraddr;
 
     function initialize(
         address __superAdmin,
@@ -152,7 +149,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         IERC20 _token,
         bool _withdrawable
     ) public onlyOwner {
-        _storage.massUpdatePools();
+        massUpdatePools();
         _storage.addPool(_allocPoint, _token, _withdrawable);
     }
 
@@ -163,7 +160,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         uint256 _allocPoint,
         bool _withdrawable
     ) public onlyOwner {
-        _storage.massUpdatePools();
+        massUpdatePools();
         _storage.setPool(_pid, _allocPoint, _withdrawable);
     }
 
@@ -176,23 +173,48 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 _pid)
         internal
-        returns (uint256 _ramRewardWhole, uint256 _ygyRewardWhole)
+        returns (uint256 ramRewardsWhole, uint256 ygyRewardsWhole)
     {
-        (uint256 ramRewardWhole, uint256 ygyRewardWhole) = _storage.updatePool(
-            _pid
-        );
-        uint256 ramRewardFee = ramRewardWhole.mul(DEV_FEE).div(10000);
-        uint256 ygyRewardFee = ygyRewardWhole.mul(DEV_FEE).div(10000);
+        YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(_pid, _storage);
 
-        // Add dev shares
+        uint256 tokenSupply = pool.token.balanceOf(address(this));
+        if (tokenSupply == 0) {
+            return (0, 0);
+        }
+        uint256 effectivePoolStakedSupply = tokenSupply.add(
+            pool.effectiveAdditionalTokensFromBoosts
+        );
+
+        ramRewardsWhole = _storage.pendingRewards().mul(pool.allocPoint).div(
+            _storage.totalAllocPoint()
+        );
+
+        // Ram rewards
+        uint256 ramRewardFee = ramRewardsWhole.mul(DEV_FEE).div(10000);
         pending_DEV_rewards = pending_DEV_rewards.add(ramRewardFee);
-        pending_DEV_YGY_rewards = pending_DEV_YGY_rewards.add(ygyRewardFee);
+
+        // Ygy rewards should be zero most of the time running.
+        uint256 pendingYGYRewards = _storage.pendingYGYRewards();
+        if (pendingYGYRewards > 0) {
+            ygyRewardsWhole = pendingYGYRewards.mul(pool.allocPoint).div(
+                _storage.totalAllocPoint()
+            );
+            uint256 ygyRewardFee = ygyRewardsWhole.mul(DEV_FEE).div(10000);
+            pending_DEV_YGY_rewards = pending_DEV_YGY_rewards.add(ygyRewardFee);
+            pool.accYGYPerShare = pool.accYGYPerShare.add(
+                ygyRewardsWhole.sub(ygyRewardFee).mul(1e12).div(
+                    effectivePoolStakedSupply
+                )
+            );
+        }
 
         // Update shares
-        YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(_pid, _storage);
-        pool.updateShares(ygyRewardFee, ramRewardFee, _storage);
+        pool.accRAMPerShare = pool.accRAMPerShare.add(
+            ramRewardsWhole.sub(ramRewardFee).mul(1e12).div(
+                effectivePoolStakedSupply
+            )
+        );
         _storage.updatePoolInfo(_pid, pool);
-        return (ramRewardWhole, ygyRewardWhole);
     }
 
     // Deposit tokens to RamVault for RAM allocation.
@@ -339,12 +361,30 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         emit Withdraw(to, _pid, _amount);
     }
 
+    function massUpdatePools() public {
+        uint256 allRewards;
+        uint256 allYGYRewards;
+        for (uint256 pid = 0; pid < _storage.getPoolLength(); ++pid) {
+            (uint256 ramWholeReward, uint256 ygyWholeReward) = updatePool(pid);
+            allRewards = allRewards.add(ramWholeReward);
+            allYGYRewards = allYGYRewards.add(ygyWholeReward);
+        }
+
+        _storage.updatePoolRewards(allRewards, allYGYRewards);
+    }
+
+    function checkRewards(uint256 _pid, address _user)
+        public
+        view
+        returns (uint256 pendingRAM, uint256 pendingYGY)
+    {
+        return _storage.checkRewards(_pid, _user);
+    }
+
     function updateAndPayOutPending(uint256 _pid, address _from) internal {
-        _storage.massUpdatePools();
-        (uint256 pendingRAM, uint256 pendingYGY) = _storage.checkRewards(
-            _pid,
-            _from
-        );
+        massUpdatePools();
+
+        (uint256 pendingRAM, uint256 pendingYGY) = checkRewards(_pid, _from);
         if (pendingRAM > 0) {
             safeRamTransfer(_from, pendingRAM);
         }
@@ -401,6 +441,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         // Update balances and level
         user.spentMultiplierTokens = user.spentMultiplierTokens.add(finalCost);
         user.boostLevel = _level;
+        console.log(_level);
 
         // If user has staked balances, then set their new accounting balance
         if (user.amount > 0) {
