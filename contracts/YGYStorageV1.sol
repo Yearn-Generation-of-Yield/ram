@@ -10,10 +10,12 @@ import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/INBUNIERC20.sol";
 import "./uniswapv2/interfaces/IWETH.sol";
+import "./libraries/PoolHelper.sol";
 
 contract YGYStorageV1 is AccessControlUpgradeSafe {
     /* STORAGE CONFIG */
     using SafeMath for uint256;
+    using PoolHelper for PoolInfo;
 
     bytes32 public constant MODIFIER_ROLE = keccak256("MODIFIER_ROLE");
 
@@ -38,6 +40,29 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     // Pool/Vault-id -> userrAddress -> userInfo
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
+    function updateUserInfo(
+        uint256 _poolId,
+        address _userAddress,
+        UserInfo memory _userInfo
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        userInfo[_poolId][_userAddress] = _userInfo;
+    }
+
+    // PoolId -> UserAddress -> Spender -> Allowance
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        public poolAllowance;
+
+    function setPoolAllowance(
+        uint256 _pid,
+        address _user,
+        address _spender,
+        uint256 _allowance
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        poolAllowance[_pid][_user][_spender] = _allowance;
+    }
+
     // Pool properties
     struct PoolInfo {
         IERC20 token; // Address of  token contract.
@@ -45,11 +70,106 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         uint256 accRAMPerShare; // Accumulated RAMs per share, times 1e12. See below.
         uint256 accYGYPerShare; // Accumulated YGYs per share, times 1e12. See below.
         bool withdrawable; // Is this pool withdrawable?
-        mapping(address => mapping(address => uint256)) allowance;
         uint256 effectiveAdditionalTokensFromBoosts; // Track the total additional accounting staked tokens from boosts.
     }
     // All pool properties
     PoolInfo[] public poolInfo;
+
+    function updatePoolInfo(uint256 _poolId, PoolInfo memory _userInfo)
+        external
+    {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        poolInfo[_poolId] = _userInfo;
+    }
+
+    function setPool(
+        uint256 _poolId,
+        uint256 _allocPoint,
+        bool _withdrawable
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        totalAllocPoint.sub(poolInfo[_poolId].allocPoint).add(_allocPoint);
+        poolInfo[_poolId].allocPoint = _allocPoint;
+        poolInfo[_poolId].withdrawable = _withdrawable;
+    }
+
+    function addPool(
+        uint256 _allocPoint,
+        IERC20 _token,
+        bool _withdrawable
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            require(poolInfo[pid].token != _token, "Error pool already added");
+        }
+        totalAllocPoint = totalAllocPoint.add(_allocPoint);
+        poolInfo.push(
+            YGYStorageV1.PoolInfo({
+                token: _token,
+                allocPoint: _allocPoint,
+                accRAMPerShare: 0,
+                accYGYPerShare: 0,
+                withdrawable: _withdrawable,
+                effectiveAdditionalTokensFromBoosts: 0
+            })
+        );
+    }
+
+    function massUpdatePools() public {
+        uint256 allRewards;
+        uint256 allYGYRewards;
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            (uint256 ramWholeReward, uint256 ygyWholeReward) = updatePool(pid);
+            allRewards = allRewards.add(ramWholeReward);
+            allYGYRewards = allYGYRewards.add(ygyWholeReward);
+        }
+
+        pendingRewards = pendingRewards.sub(allRewards);
+        pendingYGYRewards = pendingYGYRewards.sub(allYGYRewards);
+    }
+
+    function updatePool(uint256 _pid)
+        public
+        returns (uint256 _ramRewardWhole, uint256 _ygyRewardWhole)
+    {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        PoolInfo storage pool = poolInfo[_pid];
+        // avoids division by 0 errors
+        if (pool.token.balanceOf(address(this)) == 0) {
+            return (0, 0);
+        }
+
+        // Get whole rewards for tokens
+        return pool.getWholeRewards(this);
+    }
+
+    function addPendingRewards(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        pendingRewards = pendingRewards.add(_amount);
+        rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+
+        if (YGYReserve > _amount) {
+            pendingYGYRewards = pendingYGYRewards.add(_amount);
+            YGYReserve = YGYReserve.sub(_amount);
+        } else if (YGYReserve > 0) {
+            pendingYGYRewards = pendingYGYRewards.add(YGYReserve);
+            YGYReserve = 0;
+        }
+    }
+
+    function addAdditionalRewards(uint256 _amount, bool _ygy) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_ygy) {
+            YGYReserve = YGYReserve.add(_amount);
+        } else {
+            pendingRewards = pendingRewards.add(_amount);
+            rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+        }
+    }
+
+    function getPoolLength() external view returns (uint256) {
+        return poolInfo.length;
+    }
 
     function getPoolInfo(uint256 _poolId)
         external
@@ -84,21 +204,68 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     // Extra balance-keeping for extra-token rewards
     uint256 public YGYReserve;
 
+    function setYGYReserve(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        YGYReserve = _amount;
+    }
+
     // Reward token balance-keeping
     uint256 internal ramBalance;
+
+    function setRAMBalance(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        ramBalance = _amount;
+    }
+
     uint256 internal ygyBalance;
 
+    function setYGYBalance(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        ygyBalance = _amount;
+    }
+
     uint256 public RAMVaultStartBlock;
+
+    function setRAMVaultStartBlock() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        RAMVaultStartBlock = block.number;
+    }
+
     uint256 public epochCalculationStartBlock;
+
+    function setEpochCalculationStartBlock() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        epochCalculationStartBlock = block.number;
+    }
+
     uint256 public cumulativeRewardsSinceStart;
+
+    function setEpochCalculationStartBlock(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        cumulativeRewardsSinceStart = _amount;
+    }
+
     uint256 public cumulativeYGYRewardsSinceStart;
+
+    function setCumulativeRewardsSinceStart() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        cumulativeRewardsSinceStart =
+            cumulativeRewardsSinceStart +
+            rewardsInThisEpoch;
+
+        cumulativeYGYRewardsSinceStart =
+            cumulativeYGYRewardsSinceStart +
+            rewardsInThisEpoch;
+    }
+
     uint256 public rewardsInThisEpoch;
 
-    uint256 public epoch;
+    function setRewardsInThisEpoch(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        rewardsInThisEpoch = _amount;
+    }
 
-    // System addresses
-    address public regeneratoraddr;
-    address public teamaddr;
+    uint256 public epoch;
 
     // TOKENS
     INBUNIERC20 public ram; // The RAM token
@@ -107,20 +274,11 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     address public _YGYToken;
     address public _YGYWETHPair;
     address public _RAMToken;
-    IERC20 public _dXIOTToken;
     IWETH public _WETH;
+    IERC20 public _dXIOTToken;
 
-    function initializeRAMVault(
-        address _ram,
-        address _ygy,
-        address _teamaddr,
-        address _regeneratoraddr
-    ) external initializer {
+    function initializeRAMVault() external {
         require(hasRole(MODIFIER_ROLE, _msgSender()));
-        ram = INBUNIERC20(_ram);
-        ygy = IERC20(_ygy);
-        teamaddr = _teamaddr;
-        regeneratoraddr = _regeneratoraddr;
         RAMVaultStartBlock = block.number;
 
         boostLevelCosts[1] = 5 * 1e18; // 5 RAM tokens
@@ -143,6 +301,8 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         address dXIOTToken
     ) external {
         require(hasRole(MODIFIER_ROLE, _msgSender()));
+        ram = INBUNIERC20(RAMToken);
+        ygy = IERC20(YGYToken);
         _RAMToken = RAMToken;
         _YGYToken = YGYToken;
         _WETH = IWETH(WETH);
@@ -156,11 +316,17 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
 
     // Boosts
     uint256 public boostFees;
-    mapping(uint256 => uint256) public boostLevelCosts;
 
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
+    function setBoostFees(uint256 _amount, bool _add) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_add) {
+            boostFees = boostFees.add(_amount);
+        } else {
+            boostFees = _amount;
+        }
     }
+
+    mapping(uint256 => uint256) public boostLevelCosts;
 
     function checkRewards(uint256 _pid, address _user)
         external
@@ -213,32 +379,47 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     // For easy graphing historical epoch rewards
     mapping(uint256 => uint256) public epochRewards;
 
-    function getEpochRewards(uint256 _epoch) external view returns (uint256) {
-        return epochRewards[_epoch];
+    function setEpochRewards() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        epochRewards[epoch] = rewardsInThisEpoch;
+        epoch++;
     }
 
     /*
          ROUTER
     */
 
-    // Lottery tracking
-    struct LotteryTicket {
-        address owner;
-        uint256 levelOneChance;
-        uint256 levelTwoChance;
-        uint256 levelThreeChance;
-        uint256 levelFourChance;
-        uint256 levelFiveChance;
-    }
-    uint256 public ticketCount;
+    // Mapping of (user => last ticket level)
+    mapping(address => uint256) public lastTicketLevel;
 
-    mapping(uint256 => LotteryTicket) public tickets;
+    // Setter for contracts using
+    function setLastTicketLevel(address _user, uint256 _level) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        lastTicketLevel[_user] = _level;
+    }
+
     // Total eth contributed to a vault.
     mapping(address => uint256) public liquidityContributedEthValue;
-    mapping(address => uint256) public lastTicketLevel; // Mapping of (user => last ticket level)
+
+    // Set value for mapping from external contracts
+    function setLiquidityContributedEthValue(
+        address _spender,
+        uint256 _amount,
+        bool _delete
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_delete) {
+            delete liquidityContributedEthValue[_spender];
+        } else {
+            liquidityContributedEthValue[_spender] = liquidityContributedEthValue[_spender]
+                .add(_amount);
+        }
+    }
 
     // NFT STUFF
-    mapping(uint256 => address) public _NFTs; // Mapping of (level number => NFT address)
+
+    // Mapping of (level number => NFT address)
+    mapping(uint256 => address) public _NFTs;
 
     // Property object, extra field for arbirtrary values in futurer
     struct NFTProperty {
@@ -248,6 +429,16 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     }
 
     mapping(address => NFTProperty[]) public nftPropertyChoices;
+
+    function setNFTPropertiesForContract(
+        address _contractAddress,
+        NFTProperty[] memory _properties
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        for (uint256 i; i < _properties.length; i++) {
+            nftPropertyChoices[_contractAddress].push(_properties[i]);
+        }
+    }
 
     function getNFTAddress(uint256 _contractId)
         external

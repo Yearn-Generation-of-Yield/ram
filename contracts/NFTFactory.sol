@@ -6,12 +6,11 @@ import "./interfaces/INFT.sol";
 import "./NFT.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "./YGYStorageV1.sol";
+import "./StorageState.sol";
 
-contract NFTFactory is YGYStorageV1 {
+contract NFTFactory is StorageState, OwnableUpgradeSafe {
     address[] public contracts;
     address public bondedContract;
-    address owner;
 
     // address public lastContractAddress;
     // mapping(address => bool) public ownedContracts;
@@ -19,8 +18,8 @@ contract NFTFactory is YGYStorageV1 {
     event NFTMinted(string tokenName, address to, uint256 tokenId);
     event NFTBurned(string tokenName, address from, uint256 tokenId);
 
-    constructor() public {
-        owner = msg.sender;
+    constructor(YGYStorageV1 __storage) public {
+        _storage = __storage;
     }
 
     function deployNFT(
@@ -35,7 +34,7 @@ contract NFTFactory is YGYStorageV1 {
         uint256 capAmount
     ) public returns (NFT newContract) {
         require(
-            _msgSender() == owner || _msgSender() == bondedContract,
+            _msgSender() == owner() || _msgSender() == bondedContract,
             "Invalid caller: can't deploy NFT"
         );
 
@@ -69,7 +68,7 @@ contract NFTFactory is YGYStorageV1 {
     }
 
     function mint(INFT _nft, address _to) external returns (uint256) {
-        require(_msgSender() == bondedContract || _msgSender() == owner);
+        require(_msgSender() == bondedContract || _msgSender() == owner());
         uint256 tokenId = _nft.mint(_to);
         emit NFTMinted(_nft.name(), _to, tokenId);
         return tokenId;
@@ -84,19 +83,16 @@ contract NFTFactory is YGYStorageV1 {
         emit NFTBurned(_nft.name(), _msgSender(), _tokenId);
     }
 
-    function setNFTProperties(address _nft, NFTProperty[] memory _properties)
-        external
-    {
-        require(msg.sender == owner);
-        NFTProperty[] storage properties;
-        for (uint256 i; i < _properties.length; i++) {
-            properties.push(_properties[i]);
-        }
-        nftPropertyChoices[_nft] = properties;
+    function setNFTProperties(
+        address _nft,
+        YGYStorageV1.NFTProperty[] memory _properties
+    ) external {
+        require(msg.sender == owner());
+        _storage.setNFTPropertiesForContract(_nft, _properties);
     }
 
     function bondContract(address _addr) external returns (bool) {
-        require(msg.sender == owner);
+        require(msg.sender == owner());
         bondedContract = _addr;
         return true;
     }

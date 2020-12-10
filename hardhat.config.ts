@@ -1,8 +1,9 @@
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-etherscan";
+import "@nomiclabs/hardhat-ethers";
+import "hardhat-deploy-ethers";
 import "hardhat-typechain";
 import "hardhat-contract-sizer";
-import "hardhat-deploy-ethers";
 import "hardhat-deploy";
 import { removeConsoleLog } from "hardhat-preprocessor";
 

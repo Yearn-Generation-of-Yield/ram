@@ -16,7 +16,7 @@ import "./YGYStorageV1.sol";
 
 // This contract is supposed to streamline liquidity additions
 // By allowing people to put in any amount of ETH or YGY and get LP tokens back
-contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
+contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     // RAM protocol variable
     IFeeApprover public _feeApprover;
     IRAMVault public _RAMVault;
@@ -37,6 +37,26 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
     uint256 public rngLinkFee;
     bytes32 internal keyHash;
 
+    address public _YGYRAMPair;
+    address public _YGYToken;
+    address public _YGYWETHPair;
+    address public _RAMToken;
+    IWETH public _WETH;
+    IERC20 public _dXIOTToken;
+
+    // Lottery tracking
+    struct LotteryTicket {
+        address owner;
+        uint256 levelOneChance;
+        uint256 levelTwoChance;
+        uint256 levelThreeChance;
+        uint256 levelFourChance;
+        uint256 levelFiveChance;
+    }
+    uint256 public ticketCount;
+
+    mapping(uint256 => LotteryTicket) public tickets;
+
     // NFT
     INFTFactory public _NFTFactory;
 
@@ -46,6 +66,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         address RAMVault,
         address nftFactory,
         address payable _regenerator,
+        address __storage,
         address linkAddr,
         address vrfAddr
     )
@@ -59,11 +80,22 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         _feeApprover = IFeeApprover(feeApprover);
         _RAMVault = IRAMVault(RAMVault);
         _NFTFactory = INFTFactory(nftFactory);
+        _storage = YGYStorageV1(__storage);
+
         regenerator = _regenerator;
         refreshApproval();
         // TODO: Update to mainnet variables
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
         rngLinkFee = 0.1 * 10**18;
+    }
+
+    function setTokens() external onlyOwner {
+        _YGYRAMPair = _storage._YGYRAMPair();
+        _YGYToken = _storage._YGYToken();
+        _YGYWETHPair = _storage._YGYWETHPair();
+        _RAMToken = _storage._RAMToken();
+        _WETH = _storage._WETH();
+        _dXIOTToken = _storage._dXIOTToken();
     }
 
     function setGovernance(address _governance) public {
@@ -78,7 +110,10 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
     }
 
     function refreshApproval() public {
-        IUniswapV2Pair(_YGYRAMPair).approve(address(_RAMVault), uint256(-1));
+        IUniswapV2Pair(_storage._YGYRAMPair()).approve(
+            address(_RAMVault),
+            uint256(-1)
+        );
     }
 
     event FeeApproverChanged(
@@ -87,7 +122,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
     );
 
     fallback() external payable {
-        if (msg.sender != address(_WETH)) {
+        if (msg.sender != address(_storage._WETH())) {
             addLiquidityETHOnly(msg.sender, false);
         }
     }
@@ -101,7 +136,6 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
 
         uint256 buyAmount = msg.value;
         require(buyAmount > 0, "Insufficient ETH amount");
-
         _WETH.deposit{value: msg.value}();
 
         (uint256 reserveWeth, uint256 reserveYGY) = getYGYWETHPairReserves();
@@ -113,9 +147,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
 
         _WETH.transfer(_YGYWETHPair, buyAmount);
 
-        liquidityContributedEthValue[to] = liquidityContributedEthValue[to].add(
-            buyAmount
-        );
+        _storage.setLiquidityContributedEthValue(to, buyAmount, false);
 
         (address token0, address token1) = UniswapV2Library.sortTokens(
             address(_WETH),
@@ -159,8 +191,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         uint256 taxedAmount = amount.mul(regeneratorTax).div(100);
         regenerator.transfer(taxedAmount);
 
-        liquidityContributedEthValue[msg
-            .sender] = liquidityContributedEthValue[msg.sender].add(outETH);
+        _storage.setLiquidityContributedEthValue(msg.sender, outETH, false);
 
         uint256 outAmount = amount.sub(taxedAmount);
         _swapYGYForRAMAndAddLiquidity(outAmount.div(2), msg.sender, autoStake);
@@ -358,8 +389,8 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         );
 
         // Mint a LINK NFT to caller (only if they don't have one yet)
-        if (INFT(_NFTs[7]).balanceOf(msg.sender) == 0) {
-            _NFTFactory.mint(INFT(_NFTs[7]), msg.sender);
+        if (INFT(_storage._NFTs(7)).balanceOf(msg.sender) == 0) {
+            _NFTFactory.mint(INFT(_storage._NFTs(7)), msg.sender);
         }
 
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
@@ -385,25 +416,25 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         for (uint256 i = 0; i < ticketCount; i++) {
             LotteryTicket memory ticket = tickets[ticketCount];
             if (randomResult <= ticket.levelOneChance) {
-                _NFTFactory.mint(INFT(_NFTs[1]), ticket.owner);
+                _NFTFactory.mint(INFT(_storage._NFTs(1)), ticket.owner);
             }
             if (randomResult <= ticket.levelTwoChance) {
-                _NFTFactory.mint(INFT(_NFTs[2]), ticket.owner);
+                _NFTFactory.mint(INFT(_storage._NFTs(2)), ticket.owner);
             }
             if (randomResult <= ticket.levelThreeChance) {
-                _NFTFactory.mint(INFT(_NFTs[3]), ticket.owner);
+                _NFTFactory.mint(INFT(_storage._NFTs(3)), ticket.owner);
             }
             if (randomResult <= ticket.levelFourChance) {
-                _NFTFactory.mint(INFT(_NFTs[4]), ticket.owner);
+                _NFTFactory.mint(INFT(_storage._NFTs(4)), ticket.owner);
             }
             console.log("Should mint here?", ticket.levelFiveChance);
             if (randomResult <= ticket.levelFiveChance) {
-                _NFTFactory.mint(INFT(_NFTs[5]), ticket.owner);
+                _NFTFactory.mint(INFT(_storage._NFTs(5)), ticket.owner);
             }
 
-            delete liquidityContributedEthValue[ticket.owner];
+            _storage.setLiquidityContributedEthValue(ticket.owner, 0, true);
             delete tickets[i];
-            delete lastTicketLevel[ticket.owner];
+            _storage.setLastTicketLevel(ticket.owner, 0);
         }
 
         // Reset lottery
@@ -412,7 +443,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
     }
 
     function getUserLotteryLevel(address user) public view returns (uint256) {
-        uint256 liquidityEthValue = liquidityContributedEthValue[user];
+        uint256 liquidityEthValue = _storage.liquidityContributedEthValue(user);
         if (liquidityEthValue < 1e18) {
             return 0;
         } else if (liquidityEthValue >= 1e18 && liquidityEthValue < 5e18) {
@@ -434,7 +465,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
 
     // Mints a robot NFT to specified user if their dXIOT balance is over 20+
     function mintRobotNFT(address user) internal {
-        INFT robot = INFT(_NFTs[6]);
+        INFT robot = INFT(_storage._NFTs(6));
         if (
             _dXIOTToken.balanceOf(user) >= 20e18 &&
             _NFTFactory.balanceOf(robot, user) == 0 &&
@@ -446,7 +477,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
 
     // Generates lottery tickets for users based on their current level and new level
     function generateLotteryTickets(address user) internal {
-        uint256 currentLevel = lastTicketLevel[user];
+        uint256 currentLevel = _storage.lastTicketLevel(user);
         uint256 newLevel = getUserLotteryLevel(user);
         for (uint256 i = currentLevel; i < newLevel; i++) {
             LotteryTicket memory ticket;
@@ -541,7 +572,7 @@ contract RAMv1Router is OwnableUpgradeSafe, VRFConsumerBase, YGYStorageV1 {
         if (newLevel >= 3) {
             mintRobotNFT(user);
         }
-        lastTicketLevel[user] = newLevel;
+        _storage.setLastTicketLevel(user, newLevel);
     }
 
     // Chainlink VRF mainnet functionality will change in the future: dynamic pricing
