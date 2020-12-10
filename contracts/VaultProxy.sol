@@ -2,12 +2,25 @@ pragma solidity ^0.6.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "./YGYStorageV1.sol";
+import "./StorageState.sol";
 
-contract VaultProxy is OwnableUpgradeSafe, YGYStorageV1 {
+contract VaultProxy is StorageState {
     address implementation;
+    address owner;
 
-    function initialize(address _implementation, address) external onlyOwner {
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    function initialize(address _implementation, YGYStorageV1 __storage)
+        external
+    {
+        require(msg.sender == owner);
+        console.log(
+            "setting implementation and storage location",
+            _implementation
+        );
+        _storage = __storage;
         implementation = _implementation;
     }
 
