@@ -279,52 +279,55 @@ contract ERC721 is
         address to,
         uint256 tokenId
     ) public virtual override {
-        safeTransferFrom(from, to, tokenId, 0);
+        safeTransferFrom(from, to, tokenId, "");
     }
 
     /**
-     * @dev See {IERC721-safeTransferFrom}.
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * If the target address is a contract, it must implement {IERC721Receiver-onERC721Received},
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * Requires the _msgSender() to be the owner, approved, or operator
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     * @param _data bytes data to send along with a safe transfer check
      */
     function safeTransferFrom(
         address from,
         address to,
         uint256 tokenId,
-        uint256 poolId
+        bytes memory _data
     ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: transfer caller is not owner nor approved"
         );
-        _safeTransfer(from, to, tokenId, poolId);
+        _safeTransfer(from, to, tokenId, _data);
     }
 
     /**
-     * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
-     * are aware of the ERC721 protocol to prevent tokens from being forever locked.
-     *
-     * `_data` is additional data, it has no specified format and it is sent in call to `to`.
-     *
-     * This internal function is equivalent to {safeTransferFrom}, and can be used to e.g.
-     * implement alternative mecanisms to perform token transfer, such as signature-based.
-     *
-     * Requirements:
-     *
-     * - `from` cannot be the zero address.
-     * - `to` cannot be the zero address.
-     * - `tokenId` token must exist and be owned by `from`.
-     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
-     *
-     * Emits a {Transfer} event.
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * If the target address is a contract, it must implement `onERC721Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * Requires the msg.sender to be the owner, approved, or operator
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     * @param _data bytes data to send along with a safe transfer check
      */
     function _safeTransfer(
         address from,
         address to,
         uint256 tokenId,
-        uint256 poolId
+        bytes memory _data
     ) internal virtual {
         _transfer(from, to, tokenId);
         require(
-            _checkOnERC721Received(from, to, tokenId, poolId),
+            _checkOnERC721Received(from, to, tokenId, _data),
             "ERC721: transfer to non ERC721Receiver implementer"
         );
     }
@@ -378,8 +381,15 @@ contract ERC721 is
     }
 
     /**
-     * @dev Same as {xref-ERC721-_safeMint-address-uint256-}[`_safeMint`], with an additional `data` parameter which is
-     * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
+     * @dev Internal function to safely mint a new token.
+     * Reverts if the given token ID already exists.
+     * If the target address is a contract, it must implement `onERC721Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * @param to The address that will own the minted token
+     * @param tokenId uint256 ID of the token to be minted
+     * @param _data bytes data to send along with a safe transfer check
      */
     function _safeMint(
         address to,
@@ -388,7 +398,7 @@ contract ERC721 is
     ) internal virtual {
         _mint(to, tokenId);
         require(
-            _checkOnERC721Received(address(0), to, tokenId, 0),
+            _checkOnERC721Received(address(0), to, tokenId, _data),
             "ERC721: transfer to non ERC721Receiver implementer"
         );
     }
@@ -407,6 +417,7 @@ contract ERC721 is
      */
     function mint(address to) internal returns (uint256 tokenId) {
         uint256 currentId = _tokenIdTracker.current();
+        console.log(currentId);
         _safeMint(to, currentId);
         _tokenIdTracker.increment();
         return currentId;
@@ -488,31 +499,42 @@ contract ERC721 is
      * @param from address representing the previous owner of the given token ID
      * @param to target address that will receive the tokens
      * @param tokenId uint256 ID of the token to be transferred
-     * @param poolId poolId to target
+     * @param _data bytes optional data to send along with the call
      * @return bool whether the call correctly returned the expected magic value
      */
     function _checkOnERC721Received(
         address from,
         address to,
         uint256 tokenId,
-        uint256 poolId
+        bytes memory _data
     ) private returns (bool) {
         if (!to.isContract()) {
             return true;
         }
-        bytes memory returndata = to.functionCall(
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory returndata) = to.call(
             abi.encodeWithSelector(
                 IERC721Receiver(to).onERC721Received.selector,
                 _msgSender(),
                 from,
                 tokenId,
-                poolId,
-                address(this)
-            ),
-            "ERC721: transfer to non ERC721Receiver implementer"
+                _data
+            )
         );
-        bytes4 retval = abi.decode(returndata, (bytes4));
-        return (retval == _ERC721_RECEIVED);
+        if (!success) {
+            if (returndata.length > 0) {
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert("ERC721: transfer to non ERC721Receiver implementer");
+            }
+        } else {
+            bytes4 retval = abi.decode(returndata, (bytes4));
+            return (retval == _ERC721_RECEIVED);
+        }
     }
 
     function _approve(address to, uint256 tokenId) private {

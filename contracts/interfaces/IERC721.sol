@@ -82,6 +82,6 @@ interface IERC721 is IERC165 {
         address from,
         address to,
         uint256 tokenId,
-        uint256 poolId
+        bytes calldata data
     ) external;
 }

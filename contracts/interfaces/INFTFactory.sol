@@ -11,7 +11,11 @@ interface INFTFactory {
         string memory tokenURI
     ) external returns (NFT newContract);
 
-    function mint(INFT _nft, address recipient) external;
+    function mint(
+        INFT _nft,
+        address recipient,
+        uint256 _randomness
+    ) external;
 
     function bondContract(address addr) external returns (bool);
 

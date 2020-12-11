@@ -8,6 +8,8 @@ const setTestVars = async (that, ethers, deployments) => {
   that.RAM = await ethers.getContract("RAM");
   that.WETH = await ethers.getContract("WETH9");
   that.FeeApprover = await ethers.getContract("FeeApprover");
+  that.ChainLink = await ethers.getContract("ChainLinkToken");
+  that.NFTFactory = await ethers.getContract("NFTFactory");
   that.Storage = await ethers.getContract("YGYStorageV1");
 
   // Test addresses

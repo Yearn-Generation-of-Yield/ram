@@ -25,7 +25,7 @@ contract VaultProxy is StorageState {
     function _setImplementation(
         address _newImplementation,
         YGYStorageV1 __storage
-    ) public {
+    ) internal {
         require(msg.sender == proxyOwner());
         bytes32 position = implementationPosition;
         _storage = __storage;

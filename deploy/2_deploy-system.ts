@@ -1,5 +1,8 @@
+import { VaultProxy } from "./../types/VaultProxy.d";
+import { RAMVault } from "./../types/RAMVault.d";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { keccak256 } from "ethers/lib/utils";
 
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 const separator = () => console.log("-----------------------------------------");
@@ -62,131 +65,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [YGYStorage.address],
   });
   separator();
-
-  // Deployed instance
-  const NFTFactory = await ethers.getContractAt("NFTFactory", NFTFACTORY.address, deployerSigner);
-
-  const nfts = [];
-
-  /** NFT DEPLOYMENTS  */
-  const NFT1TX = await NFTFactory.deployNFT(
-    "RAM LEVEL 1",
-    "RAM1",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    0,
-    2,
-    deployer,
-    true,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-  const NFT2TX = await NFTFactory.deployNFT(
-    "RAM LEVEL 2",
-    "RAM3",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    1,
-    2,
-    deployer,
-    true,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-  const NFT3TX = await NFTFactory.deployNFT(
-    "RAM LEVEL 3",
-    "RAM3",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    2,
-    2,
-    deployer,
-    true,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-  const NFT4TX = await NFTFactory.deployNFT(
-    "RAM LEVEL 4",
-    "RAM4",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    3,
-    2,
-    deployer,
-    true,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-
-  const NFT5TX = await NFTFactory.deployNFT(
-    "RAM LEVEL 5",
-    "RAM5",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    4,
-    2,
-    deployer,
-    true,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-  const NFT6TX = await NFTFactory.deployNFT(
-    "ROBOT",
-    "ROBOT",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    5,
-    1,
-    deployer,
-    false,
-    true,
-    50,
-    { from: deployer }
-  );
-  const NFT7TX = await NFTFactory.deployNFT(
-    "LINK",
-    "LINK",
-    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
-    6,
-    1,
-    deployer,
-    false,
-    false,
-    MAX_INT,
-    { from: deployer }
-  );
-
-  const receipts = await Promise.all([
-    NFT1TX.wait(),
-    NFT2TX.wait(),
-    NFT3TX.wait(),
-    NFT4TX.wait(),
-    NFT5TX.wait(),
-    NFT6TX.wait(),
-    NFT7TX.wait(),
-  ]);
-
-  receipts.forEach((receipt) => {
-    nfts.push(receipt.logs[0].address);
-  });
-  console.log("Total NFTs deployed: ", nfts.length);
-  separator();
-
-  /** GENERATE UNI PAIRS */
-
-  const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
-  const pairtx2 = await UNIFactory.createPair(RAM.address, YGY.address, { from: deployer });
-  const txres = await pairtx1.wait();
-  const txres2 = await pairtx2.wait();
-
-  // Pair address is third arg for the PairCreated event.
-  const YGYWETHAddr = txres.events[0].args[2];
-  const YGYRAMAddr = txres2.events[0].args[2];
-  console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHAddr, "YGYRAM:", YGYRAMAddr);
-  separator();
-
-  const YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", YGYWETHAddr, deployerSigner);
-  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", YGYRAMAddr, deployerSigner);
-
   /** VAULT DEPLOY */
   const RAMVAULT = await deploy("RAMVault", {
     from: deployer,
@@ -213,11 +91,165 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // Deployed instance using proxy
   const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
-  console.log("Addresses:", deployer, regeneratoraddr, devaddr, teamaddr);
   await RAMVault.initialize(deployer, regeneratoraddr, devaddr, teamaddr);
   console.log("Initialized ram vault itself through proxy.");
   console.log("DEV:", devaddr, "TEAM", teamaddr, "regenerator", regeneratoraddr);
   separator();
+
+  // Deployed instance
+  const NFTFactory = await ethers.getContractAt("NFTFactory", NFTFACTORY.address, deployerSigner);
+
+  const nfts = [];
+
+  /** NFT DEPLOYMENTS  */
+  const NFT1TX = await NFTFactory.deployNFT(
+    "RAM LEVEL 1",
+    "RAM1",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    0,
+    2,
+    deployer,
+    true,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+  const NFT2TX = await NFTFactory.deployNFT(
+    "RAM LEVEL 2",
+    "RAM3",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    1,
+    2,
+    deployer,
+    true,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+  const NFT3TX = await NFTFactory.deployNFT(
+    "RAM LEVEL 3",
+    "RAM3",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    2,
+    2,
+    deployer,
+    true,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+  const NFT4TX = await NFTFactory.deployNFT(
+    "RAM LEVEL 4",
+    "RAM4",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    3,
+    2,
+    deployer,
+    true,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+
+  const NFT5TX = await NFTFactory.deployNFT(
+    "RAM LEVEL 5",
+    "RAM5",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    4,
+    2,
+    deployer,
+    true,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+  const NFT6TX = await NFTFactory.deployNFT(
+    "ROBOT",
+    "ROBOT",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    5,
+    1,
+    deployer,
+    false,
+    true,
+    50,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+  const NFT7TX = await NFTFactory.deployNFT(
+    "LINK",
+    "LINK",
+    "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
+    6,
+    1,
+    deployer,
+    false,
+    false,
+    MAX_INT,
+    VAULTPROXY.address,
+    { from: deployer }
+  );
+
+  const receipts = await Promise.all([
+    NFT1TX.wait(),
+    NFT2TX.wait(),
+    NFT3TX.wait(),
+    NFT4TX.wait(),
+    NFT5TX.wait(),
+    NFT6TX.wait(),
+    NFT7TX.wait(),
+  ]);
+
+  receipts.forEach((receipt) => {
+    nfts.push(receipt.logs[0].address);
+  });
+
+  // Robot and LINK nft share same props.
+  await YGYStorage.setNFTPropertiesForContract(nfts[0], [
+    ["Something special", 11111, ethers.utils.formatBytes32String("Coming soon")],
+    ["Even more special", 24224, ethers.utils.formatBytes32String("Coming soon")],
+  ]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[1], [
+    ["Something special", 17244, ethers.utils.formatBytes32String("Coming soon")],
+    ["Even more special", 194294, ethers.utils.formatBytes32String("Coming soon")],
+  ]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[2], [
+    ["Something special", 14233, ethers.utils.formatBytes32String("Coming soon")],
+    ["Even more special", 23123139, ethers.utils.formatBytes32String("Coming soon")],
+  ]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[3], [
+    ["Something special", 41411, ethers.utils.formatBytes32String("Coming soon")],
+    ["Even more special", 23132392, ethers.utils.formatBytes32String("Coming soon")],
+  ]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[4], [
+    ["Something special", 50000, ethers.utils.formatBytes32String("Coming soon")],
+    ["Even more special", 239329392, ethers.utils.formatBytes32String("Coming soon")],
+  ]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
+  await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
+  console.log("Total NFTs deployed: ", nfts.length);
+  separator();
+
+  /** GENERATE UNI PAIRS */
+
+  const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
+  const pairtx2 = await UNIFactory.createPair(RAM.address, YGY.address, { from: deployer });
+  const txres = await pairtx1.wait();
+  const txres2 = await pairtx2.wait();
+
+  // Pair address is third arg for the PairCreated event.
+  const YGYWETHAddr = txres.events[0].args[2];
+  const YGYRAMAddr = txres2.events[0].args[2];
+  console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHAddr, "YGYRAM:", YGYRAMAddr);
+  separator();
+
+  const YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", YGYWETHAddr, deployerSigner);
+  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", YGYRAMAddr, deployerSigner);
 
   /** FEEAPPROVER */
   const FEEAPPROVER = await deploy("FeeApprover", {
@@ -226,13 +258,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   separator();
 
-  // Feeapprover instancec
+  // Feeapprover instance
   const FeeApprover = await ethers.getContractAt("FeeApprover", FEEAPPROVER.address, deployerSigner);
 
   // Now we can initialize the FeeApprover contract
   await FeeApprover.initialize(RAM.address, YGY.address, UNIFactory.address);
   console.log("FeeApprover initialized");
   await FeeApprover.setPaused(false);
+
   separator();
 
   // Set tokens to storage

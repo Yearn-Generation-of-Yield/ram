@@ -3,7 +3,6 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
-import "./interfaces/IERC721Receiver.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
 import "./libraries/Bytes.sol";
@@ -14,7 +13,7 @@ import "./StorageState.sol";
 import "hardhat/console.sol";
 
 // Ram Vault distributes fees equally amongst staked pools
-contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
+contract RAMVault is StorageState, OwnableUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Bytes for bytes;
@@ -59,31 +58,31 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
         teamaddr = _teamaddr;
     }
 
-    function onERC721Received(
-        address _caller,
-        address _previousOwner,
+    function NFTUsage(
+        address _user,
+        address _tokenAddress,
         uint256 _tokenId,
-        uint256 _poolId,
-        address _contractAddress
-    ) external override returns (bytes4) {
-        address nftAddress = _storage.getNFTAddress(uint256(_contractAddress));
-        NFT nft = NFT(nftAddress);
+        uint256 _poolId
+    ) external {
+        NFT nft = NFT(_tokenAddress);
         YGYStorageV1.NFTProperty memory properties = nft.getTokenProperty(
             _tokenId
         );
-        string memory pType = properties.pType;
         YGYStorageV1.UserInfo memory user = UserHelper.getUser(
             _poolId,
-            _previousOwner,
+            _user,
             _storage
         );
 
+        console.log("heer", _tokenAddress, _tokenId, _poolId);
         YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(
             _poolId,
             _storage
         );
 
-        if (keccak256(abi.encodePacked(pType)) == keccak256("selfBoost")) {
+        if (
+            keccak256(abi.encodePacked(properties.pType)) == keccak256("boost")
+        ) {
             user.adjustEffectiveStake(
                 pool,
                 0,
@@ -92,14 +91,9 @@ contract RAMVault is StorageState, OwnableUpgradeSafe, IERC721Receiver {
                 _storage
             );
         }
+        nft.burn(_tokenId);
         _storage.updateUserInfo(_poolId, msg.sender, user);
         _storage.updatePoolInfo(_poolId, pool);
-        return
-            bytes4(
-                keccak256(
-                    "onERC721Received(address,address,uint256,uin256,address)"
-                )
-            );
     }
 
     // --------------------------------------------

@@ -11,7 +11,7 @@ const { parseEther, formatEther } = ethers.utils;
 describe("Vault + Router", () => {
   beforeEach(async () => {
     this.formatResult = (amount) => Number(formatEther(amount));
-    const { deployer, teamaddr, devaddr } = await getNamedAccounts();
+    const { deployer, teamaddr, devaddr, regeneratoraddr } = await getNamedAccounts();
     this.parseEther = parseEther;
     this.formatEther = formatEther;
     this.deployer = deployer;
@@ -27,7 +27,7 @@ describe("Vault + Router", () => {
     this.deployer = this.users[0].address;
     this.team = teamaddr;
     this.dev = devaddr;
-    this.regenerator = this.users[3].address;
+    this.regenerator = regeneratoraddr;
     this.user1 = this.users[4].address;
     this.user2 = this.users[5].address;
     this.user3 = this.users[6].address;

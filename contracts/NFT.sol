@@ -18,7 +18,7 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
     // Capped?
     bool isCapped;
     uint256 tokenCap;
-
+    address ramVault;
     // Props for unique token
     mapping(uint256 => YGYStorageV1.NFTProperty) public properties;
 
@@ -34,33 +34,18 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
         address _superAdmin,
         bool _allowTrade,
         bool _isCapped,
-        uint256 _tokenCap
+        uint256 _tokenCap,
+        address _ramVault
     ) public ERC721(_name, _symbol, _tokenURI) {
         allowTrade = _allowTrade;
         isCapped = _isCapped;
         tokenCap = _tokenCap;
         contractId = _contractId;
         propertyChoices = _propertyChoices;
-
-        _setupRole(DEFAULT_ADMIN_ROLE, _superAdmin);
+        __AccessControl_init();
         _setupRole(SYSTEM_ROLE, _msgSender());
-        _setupRole(SYSTEM_ROLE, _superAdmin);
-    }
-
-    /**
-     * @dev See {IERC721-safeTransferFrom}.
-     */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        uint256 poolId
-    ) public virtual override {
-        require(
-            _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: transfer caller is not owner nor approved"
-        );
-        _safeTransfer(from, to, tokenId, poolId);
+        _setupRole(SYSTEM_ROLE, _ramVault);
+        _setupRole(DEFAULT_ADMIN_ROLE, _superAdmin);
     }
 
     /**
@@ -72,6 +57,7 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
                 hasRole(SYSTEM_ROLE, _msgSender()),
             "Not allowed"
         );
+        console.log("burn baby");
         _burn(_tokenId);
     }
 
@@ -91,7 +77,6 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
 
         // Mint the token, get the unique id.
         uint256 tokenId = super.mint(to);
-
         // Get a random index for property selection
         uint256 propIndex;
         if (propertyChoices > 1) {
@@ -112,6 +97,15 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
         returns (YGYStorageV1.NFTProperty memory)
     {
         return properties[_tokenId];
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override {
+        _beforeTokenTransfer(from, to, tokenId);
+        super.transferFrom(from, to, tokenId);
     }
 
     /**

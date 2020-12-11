@@ -418,7 +418,6 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     }
 
     // NFT STUFF
-
     // Mapping of (level number => NFT address)
     mapping(uint256 => address) public _NFTs;
 

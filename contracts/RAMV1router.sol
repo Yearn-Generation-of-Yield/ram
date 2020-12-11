@@ -12,7 +12,7 @@ import "./interfaces/INFTFactory.sol";
 import "./interfaces/IFeeApprover.sol";
 import "./interfaces/IRAMVault.sol";
 import "./NFT.sol";
-import "./YGYStorageV1.sol";
+import "./StorageState.sol";
 
 // This contract is supposed to streamline liquidity additions
 // By allowing people to put in any amount of ETH or YGY and get LP tokens back
@@ -375,6 +375,8 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
+    address public lastLotteryTriggerer;
+
     /**
      * Requests randomness from a user-provided seed
      */
@@ -386,12 +388,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             LINK.transferFrom(msg.sender, address(this), rngLinkFee),
             "Not enough LINK approved to contract"
         );
-
-        // Mint a LINK NFT to caller (only if they don't have one yet)
-        if (INFT(_storage._NFTs(7)).balanceOf(msg.sender) == 0) {
-            _NFTFactory.mint(INFT(_storage._NFTs(7)), msg.sender);
-        }
-
+        lastLotteryTriggerer = msg.sender;
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
@@ -403,6 +400,12 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         override
     {
         randomResult = rand(randomness);
+        INFT LinkNFT = INFT(_storage._NFTs(7));
+        // Mint a LINK NFT to caller (only if they don't have one yet)
+        if (LinkNFT.balanceOf(msg.sender) == 0) {
+            _NFTFactory.mint(LinkNFT, lastLotteryTriggerer, randomResult);
+        }
+        lastLotteryTriggerer = address(0);
         applyRandomNumberToLottery();
     }
 
@@ -415,19 +418,39 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         for (uint256 i = 0; i < ticketCount; i++) {
             LotteryTicket memory ticket = tickets[ticketCount];
             if (randomResult <= ticket.levelOneChance) {
-                _NFTFactory.mint(INFT(_storage._NFTs(1)), ticket.owner);
+                _NFTFactory.mint(
+                    INFT(_storage._NFTs(1)),
+                    ticket.owner,
+                    randomResult
+                );
             }
             if (randomResult <= ticket.levelTwoChance) {
-                _NFTFactory.mint(INFT(_storage._NFTs(2)), ticket.owner);
+                _NFTFactory.mint(
+                    INFT(_storage._NFTs(2)),
+                    ticket.owner,
+                    randomResult
+                );
             }
             if (randomResult <= ticket.levelThreeChance) {
-                _NFTFactory.mint(INFT(_storage._NFTs(3)), ticket.owner);
+                _NFTFactory.mint(
+                    INFT(_storage._NFTs(3)),
+                    ticket.owner,
+                    randomResult
+                );
             }
             if (randomResult <= ticket.levelFourChance) {
-                _NFTFactory.mint(INFT(_storage._NFTs(4)), ticket.owner);
+                _NFTFactory.mint(
+                    INFT(_storage._NFTs(4)),
+                    ticket.owner,
+                    randomResult
+                );
             }
             if (randomResult <= ticket.levelFiveChance) {
-                _NFTFactory.mint(INFT(_storage._NFTs(5)), ticket.owner);
+                _NFTFactory.mint(
+                    INFT(_storage._NFTs(5)),
+                    ticket.owner,
+                    randomResult
+                );
             }
 
             _storage.setLiquidityContributedEthValue(ticket.owner, 0, true);
@@ -469,7 +492,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             _NFTFactory.balanceOf(robot, user) == 0 &&
             robot.totalSupply() < 50
         ) {
-            _NFTFactory.mint(INFT(robot), user);
+            _NFTFactory.mint(INFT(robot), user, randomResult);
         }
     }
 
