@@ -447,6 +447,7 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
 
     // Property object, extra field for arbirtrary values in future
     struct NFTProperty {
+        string pName;
         string pType;
         uint256 pValue;
         bytes32 extra;

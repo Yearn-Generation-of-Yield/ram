@@ -227,14 +227,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         );
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
-
-        if(_dXIOTToken.balanceOf(address(this)) > 1 * 1e18) {
-            _dXIOTToken.transfer(
-                to,
-                1 * 1e18
-            );
-        }
-
         generateLotteryTickets(to);
         sync();
     }
@@ -594,7 +586,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             }
         }
 
-        if (newLevel >= 3) {
+        if (newLevel >= 3 && _dXIOTToken.balanceOf(user) >= 20 * 1e18) {
             mintRobotNFT(user);
         }
         _storage.setLastTicketLevel(user, newLevel);
