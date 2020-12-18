@@ -14,8 +14,8 @@ const setTestVars = async (that, ethers, deployments) => {
   that.Storage = await ethers.getContract("YGYStorageV1");
 
   // Test addresses
-  that.YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", "0xEE75046FBF74f97380389AA26d9952E72e0E822B");
-  that.YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0x1D13930cD4a33a4A4D2038e4CAB566052485B8a1");
+  that.YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", "0x7c5956E649b71e416EC64586118a3a60D46Fe8e5");
+  that.YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0xa4c0817cCb516C15Bc0a7c2F8038520042c34795");
 };
 
 module.exports = {

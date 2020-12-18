@@ -229,8 +229,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
         if(_dXIOTToken.balanceOf(address(this)) > 1 * 1e18) {
-            _dXIOTToken.transferFrom(
-                address(this),
+            _dXIOTToken.transfer(
                 to,
                 1 * 1e18
             );

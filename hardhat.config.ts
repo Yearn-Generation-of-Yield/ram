@@ -68,6 +68,11 @@ module.exports = {
     outDir: "./types",
     target: "ethers-v5",
   },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: etherscanApiKey,
+  },
   preprocess: {
     eachLine: removeConsoleLog((bre) => bre.network.name !== "hardhat" && bre.network.name !== "localhost"),
   },

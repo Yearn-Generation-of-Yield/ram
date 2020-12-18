@@ -12,9 +12,9 @@ async function main() {
   //@ts-ignore
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
-  const VaultProxy = await ethers.getContract("VaultProxy");
+  const VaultProxy = await ethers.getContractAt("VaultProxy", "");
   const RAMVault = await ethers.getContractAt("RAMVault", VaultProxy.address, deployerSigner);
-  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0xa4c0817cCb516C15Bc0a7c2F8038520042c34795");
+  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0x4e6Ef23B10B90D285212190d20968e4B582eD75c");
   console.log("Adding a pool for", YGYRAMPair.address);
   let tx = await RAMVault.addPool(100, YGYRAMPair.address, true);
   await tx.wait();

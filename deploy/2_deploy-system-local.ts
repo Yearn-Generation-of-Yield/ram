@@ -1,9 +1,5 @@
-import { VaultProxy } from "../types/VaultProxy";
-import { RAMVault } from "../types/RAMVault";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { keccak256 } from "ethers/lib/utils";
-import { parse } from "ts-node";
 
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 const separator = () => console.log("-----------------------------------------");
@@ -307,6 +303,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       VRF.address,
     ],
   });
+  tx = await dXIOT.connect(deployerSigner).approve(RAMROUTER.address, MAX_INT);
+  await tx.wait();
+
+  tx = await dXIOT.transfer(RAMROUTER.address, parseEther("2000"));
   console.log("RAMRouter at:", RAMROUTER.address);
   separator();
 

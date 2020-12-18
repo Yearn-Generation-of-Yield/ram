@@ -174,7 +174,7 @@ describe("NFT", function () {
     const userInfo = await this.Storage.userInfo(0, user1.address);
     Number(NFTBoostAfterThird).should.equal(20);
     console.log(Number(userInfo.boostAmount), Number(userInfo.amount));
-    ((userInfo.amount / 1e18) * 0.2).should.be.equal(userInfo.boostAmount / 1e18);
+    ((userInfo.amount / 1e18) * 0.2).should.be.closeTo(userInfo.boostAmount / 1e18, 0.01);
   });
 
   it("has metadata and random properties on nfts", async () => {

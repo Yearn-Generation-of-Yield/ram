@@ -1,8 +1,5 @@
-import { VaultProxy } from "../types/VaultProxy";
-import { RAMVault } from "../types/RAMVault";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { keccak256 } from "ethers/lib/utils";
 
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 const separator = () => console.log("-----------------------------------------");
@@ -289,7 +286,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
     ],
   });
-  console.log("RAMRouter at:", RAMROUTER.address);
+
+  console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
+  await hre.run("verify", {
+    network: hre.network.name,
+    address: RAMROUTER.address,
+    constructorArguments: [
+      UNIFactory.address.toString(),
+      FEEAPPROVER.address.toString(),
+      VAULTPROXY.address.toString(),
+      NFTFACTORY.address.toString(),
+      "0x7D60283E2Fad83bb81356F317009304082734D36",
+      YGYSTORAGE.address.toString(),
+      ChainLink.address.toString(),
+      "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
+    ],
+  });
   separator();
 
   console.log(
