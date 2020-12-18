@@ -60,7 +60,6 @@ describe("NFT", function () {
         await this.RAM.transfer(address, this.userBaseRAMBalance);
       })
     );
-    await this.dXIOT.approve(this.RAMRouter.address, MAX_INT);
     // Just approve the vault and router here
     await Promise.all(
       endUsers.map(async ({ signer }) => {
@@ -103,13 +102,12 @@ describe("NFT", function () {
     const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, user1.address));
 
     balance.should.equal(1);
-    const depositTimes = 20;
 
+    await this.dXIOT.transfer(user2.address, parseEther("20"));
     for (let i = 0; i < 21; i++) {
       let tx = await this.RAMRouter.connect(user2.signer).addLiquidityETHOnly(user2.address, true, { value: web3.utils.toWei("2") });
       await tx.wait();
     }
-
     const ROBOTNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.ROBOT);
     let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user2.address, 0).should.be.fulfilled;
     hasRobot.should.be.equal(true);
@@ -161,11 +159,11 @@ describe("NFT", function () {
     const NFTBoostAfterSecond = await this.Storage.getNFTBoost(user1.address);
     Number(NFTBoostAfterSecond).should.equal(10);
 
+    await this.dXIOT.transfer(user1.address, parseEther("20"));
     for (let i = 0; i < 21; i++) {
       let tx = await this.RAMRouter.connect(user1.signer).addLiquidityETHOnly(user1.address, true, { value: web3.utils.toWei("2") });
       await tx.wait();
     }
-
     await ROBOTNFTInstance.connect(user1.signer).transferFrom(user1.address, this.user3, 0).should.not.be.fulfilled;
     await ROBOTNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
     await this.NFTFactory.connect(user1.signer).useNFT(ROBOTNFTAddress, 1, 0).should.be.fulfilled;
@@ -271,18 +269,14 @@ describe("NFT", function () {
     let liqContributed = (await this.Storage.liquidityContributedEthValue(user.address)) / 1e18;
     liqContributed.should.equal(1.9);
 
-    let dxiots = (await this.dXIOT.balanceOf(user.address)) / 1e18;
-    dxiots.should.equal(19);
-
     let ticketLevel = Number(await this.Storage.lastTicketLevel(user.address));
     ticketLevel.should.equal(1);
 
     // Deposit for rrrrrobot
-    await this.dXIOT.connect(user.signer).approve(this.RAMRouter.address, MAX_INT);
     await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("0.1") }).should.be
       .fulfilled;
-    dxiots = (await this.dXIOT.balanceOf(user.address)) / 1e18;
-    dxiots.should.equal(20);
+
+    await this.dXIOT.transfer(user.address, parseEther("20"));
 
     const ROBOTNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.ROBOT);
     let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user.address, 0).should.not.be.fulfilled;

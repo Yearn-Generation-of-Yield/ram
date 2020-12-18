@@ -486,7 +486,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     function mintRobotNFT(address user) internal {
         INFT robot = INFT(_storage._NFTs(6));
         if (
-            _dXIOTToken.balanceOf(user) >= 20e18 &&
             _NFTFactory.balanceOf(robot, user) == 0 &&
             robot.totalSupply() < 50
         ) {
