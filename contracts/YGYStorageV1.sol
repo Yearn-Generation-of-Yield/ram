@@ -5,13 +5,38 @@ pragma experimental ABIEncoderV2;
 /**
 Storage contract for the YGY system
 */
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/INBUNIERC20.sol";
+import "./uniswapv2/interfaces/IWETH.sol";
+import "./libraries/PoolHelper.sol";
+import "hardhat/console.sol";
 
-contract YGYStorageV1 is OwnableUpgradeSafe {
+contract YGYStorageV1 is AccessControlUpgradeSafe {
+    /* STORAGE CONFIG */
     using SafeMath for uint256;
+    using PoolHelper for PoolInfo;
+
+    bytes32 public constant MODIFIER_ROLE = keccak256("MODIFIER_ROLE");
+
+    function setModifierContracts(
+        address _vault,
+        address _router,
+        address _nftFactory
+    ) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Nono");
+        _setupRole(MODIFIER_ROLE, _vault);
+        _setupRole(MODIFIER_ROLE, _router);
+        _setupRole(MODIFIER_ROLE, _nftFactory);
+    }
+
+    function init() external initializer {
+        __AccessControl_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(MODIFIER_ROLE, _msgSender());
+    }
+
     /* RAMVAULT */
 
     // User properties per vault/pool.
@@ -24,30 +49,60 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         uint256 spentMultiplierTokens;
     }
 
-    // Pool/Vault-id -> userrAddress -> userInfo
+    struct NFTUsage {
+        uint256 nftId;
+        uint256 epoch;
+    }
+
+    // Epoch -> User -> NFT ids in use.
+    mapping(uint256 => mapping(address => NFTUsage[])) public NFTUsageInfo;
+
+    function setNFTInUse(uint256 _nftId, address _user) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        NFTUsageInfo[epoch][_user].push(NFTUsage({ nftId: _nftId, epoch: epoch }));
+    }
+
+    function getNFTsInUse(address _user) external view returns (NFTUsage[] memory) {
+        return NFTUsageInfo[epoch][_user];
+    }
+
+    function getNFTBoost(address _user) external view returns (uint256) {
+        uint256 NFTBoost;
+        NFTUsage[] memory nftInfo = NFTUsageInfo[epoch][_user];
+        for(uint i; i < nftInfo.length; i++) {
+            if(epoch == nftInfo[i].epoch) {
+                if(nftInfo[i].nftId == 5 || nftInfo[i].nftId == 6) {
+                    NFTBoost = NFTBoost.add(10);
+                }
+            }
+        }
+        return NFTBoost;
+    }
+
+    // Pool/Vault/Whatever-id -> userrAddress -> userInfo
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
-    function getUserInfo(uint256 _poolId, address _user)
-        external
-        view
-        returns (
-            uint256 amount,
-            uint256 rewardDebt,
-            uint256 rewardDebtYGY,
-            uint256 boostAmount,
-            uint256 boostLevel,
-            uint256 spentMultiplierTokens
-        )
-    {
-        UserInfo memory user = userInfo[_poolId][_user];
-        return (
-            user.amount,
-            user.rewardDebt,
-            user.rewardDebtYGY,
-            user.boostAmount,
-            user.boostLevel,
-            user.spentMultiplierTokens
-        );
+    function updateUserInfo(
+        uint256 _poolId,
+        address _userAddress,
+        UserInfo memory _userInfo
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        userInfo[_poolId][_userAddress] = _userInfo;
+    }
+
+    // PoolId -> UserAddress -> Spender -> Allowance
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        public poolAllowance;
+
+    function setPoolAllowance(
+        uint256 _pid,
+        address _user,
+        address _spender,
+        uint256 _allowance
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        poolAllowance[_pid][_user][_spender] = _allowance;
     }
 
     // Pool properties
@@ -57,11 +112,86 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         uint256 accRAMPerShare; // Accumulated RAMs per share, times 1e12. See below.
         uint256 accYGYPerShare; // Accumulated YGYs per share, times 1e12. See below.
         bool withdrawable; // Is this pool withdrawable?
-        mapping(address => mapping(address => uint256)) allowance;
         uint256 effectiveAdditionalTokensFromBoosts; // Track the total additional accounting staked tokens from boosts.
     }
     // All pool properties
     PoolInfo[] public poolInfo;
+
+    function updatePoolInfo(uint256 _poolId, PoolInfo memory _userInfo)
+        external
+    {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        poolInfo[_poolId] = _userInfo;
+    }
+
+    function setPool(
+        uint256 _poolId,
+        uint256 _allocPoint,
+        bool _withdrawable
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        totalAllocPoint.sub(poolInfo[_poolId].allocPoint).add(_allocPoint);
+        poolInfo[_poolId].allocPoint = _allocPoint;
+        poolInfo[_poolId].withdrawable = _withdrawable;
+    }
+
+    function addPool(
+        uint256 _allocPoint,
+        IERC20 _token,
+        bool _withdrawable
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            require(poolInfo[pid].token != _token, "Error pool already added");
+        }
+        totalAllocPoint = totalAllocPoint.add(_allocPoint);
+        poolInfo.push(
+            YGYStorageV1.PoolInfo({
+                token: _token,
+                allocPoint: _allocPoint,
+                accRAMPerShare: 0,
+                accYGYPerShare: 0,
+                withdrawable: _withdrawable,
+                effectiveAdditionalTokensFromBoosts: 0
+            })
+        );
+    }
+
+    function updatePoolRewards(uint256 allRewards, uint256 allYGYRewards)
+        external
+    {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        pendingRewards = pendingRewards.sub(allRewards);
+        pendingYGYRewards = pendingYGYRewards.sub(allYGYRewards);
+    }
+
+    function addPendingRewards(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()), "Prohibited caller");
+        pendingRewards = pendingRewards.add(_amount);
+        rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+
+        if (YGYReserve > _amount) {
+            pendingYGYRewards = pendingYGYRewards.add(_amount);
+            YGYReserve = YGYReserve.sub(_amount);
+        } else if (YGYReserve > 0) {
+            pendingYGYRewards = pendingYGYRewards.add(YGYReserve);
+            YGYReserve = 0;
+        }
+    }
+
+    function addAdditionalRewards(uint256 _amount, bool _ygy) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_ygy) {
+            YGYReserve = YGYReserve.add(_amount);
+        } else {
+            pendingRewards = pendingRewards.add(_amount);
+            rewardsInThisEpoch = rewardsInThisEpoch.add(_amount);
+        }
+    }
+
+    function getPoolLength() external view returns (uint256) {
+        return poolInfo.length;
+    }
 
     function getPoolInfo(uint256 _poolId)
         external
@@ -86,14 +216,6 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         );
     }
 
-    // TOKENS
-    INBUNIERC20 public ram; // The RAM token
-    IERC20 public ygy; // The YGY token
-    address public _YGYRAMPair;
-    address public _YGYToken;
-    address public _YGYWETHPair;
-    IERC20 public _dXIOTToken;
-
     // Total allocattion points for the whole contract
     uint256 public totalAllocPoint;
 
@@ -104,32 +226,79 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     // Extra balance-keeping for extra-token rewards
     uint256 public YGYReserve;
 
+    function setYGYReserve(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        YGYReserve = _amount;
+    }
+
     // Reward token balance-keeping
     uint256 internal ramBalance;
+
+    function setRAMBalance(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        ramBalance = _amount;
+    }
+
     uint256 internal ygyBalance;
 
+    function setYGYBalance(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        ygyBalance = _amount;
+    }
+
     uint256 public RAMVaultStartBlock;
+
+    function setRAMVaultStartBlock() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        RAMVaultStartBlock = block.number;
+    }
+
     uint256 public epochCalculationStartBlock;
+
+    function setEpochCalculationStartBlock() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        epochCalculationStartBlock = block.number;
+    }
+
     uint256 public cumulativeRewardsSinceStart;
     uint256 public cumulativeYGYRewardsSinceStart;
+
+    function setCumulativeRewardsSinceStart() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        cumulativeRewardsSinceStart =
+            cumulativeRewardsSinceStart +
+            rewardsInThisEpoch;
+
+        cumulativeYGYRewardsSinceStart =
+            cumulativeYGYRewardsSinceStart +
+            rewardsInThisEpoch;
+    }
+
     uint256 public rewardsInThisEpoch;
+
+    function setRewardsInThisEpoch(uint256 _amount) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        rewardsInThisEpoch = _amount;
+    }
 
     uint256 public epoch;
 
-    // System addresses
-    address public regeneratoraddr;
-    address public teamaddr;
+    // TOKENS
+    INBUNIERC20 public ram; // The RAM token
+    IERC20 public ygy; // The YGY token
+    address public _YGYRAMPair;
+    address public _YGYToken;
+    address public _YGYWETHPair;
+    address public _RAMToken;
+    IWETH public _WETH;
+    IERC20 public _dXIOTToken;
 
-    function initializeRAMVault(
-        address _ram,
-        address _ygy,
-        address _teamaddr,
-        address _regeneratoraddr
-    ) external initializer {
-        ram = INBUNIERC20(_ram);
-        ygy = IERC20(_ygy);
-        teamaddr = _teamaddr;
-        regeneratoraddr = _regeneratoraddr;
+    function initializeRAMVault() external {
+        require(
+            hasRole(MODIFIER_ROLE, _msgSender()) ||
+                hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Prohibited caller"
+        );
         RAMVaultStartBlock = block.number;
 
         boostLevelCosts[1] = 5 * 1e18; // 5 RAM tokens
@@ -142,13 +311,46 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         boostLevelMultipliers[4] = 60; // 60%
     }
 
+    function setTokens(
+        address RAMToken,
+        address YGYToken,
+        address WETH,
+        address YGYRAMPair,
+        address YGYWethPair,
+        address[] memory nfts,
+        address dXIOTToken
+    ) external {
+        require(
+            hasRole(MODIFIER_ROLE, _msgSender()) ||
+                hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Prohibited caller"
+        );
+        ram = INBUNIERC20(RAMToken);
+        ygy = IERC20(YGYToken);
+        _RAMToken = RAMToken;
+        _YGYToken = YGYToken;
+        _WETH = IWETH(WETH);
+        _YGYRAMPair = YGYRAMPair;
+        _YGYWETHPair = YGYWethPair;
+        _dXIOTToken = IERC20(dXIOTToken);
+        for (uint256 i = 0; i < nfts.length; i++) {
+            _NFTs[i + 1] = nfts[i];
+        }
+    }
+
     // Boosts
     uint256 public boostFees;
-    mapping(uint256 => uint256) public boostLevelCosts;
 
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
+    function setBoostFees(uint256 _amount, bool _add) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_add) {
+            boostFees = boostFees.add(_amount);
+        } else {
+            boostFees = _amount;
+        }
     }
+
+    mapping(uint256 => uint256) public boostLevelCosts;
 
     function checkRewards(uint256 _pid, address _user)
         external
@@ -157,6 +359,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
+
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
         uint256 YGYRewards;
         if (pool.accYGYPerShare > 0) {
@@ -189,7 +392,8 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     function updateBoosts(
         uint256[] memory _boostMultipliers,
         uint256[] memory _boostCosts
-    ) public onlyOwner {
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
         // Update boost costs
         for (uint8 i; i <= _boostMultipliers.length; i++) {
             boostLevelCosts[i + 1] = _boostCosts[i];
@@ -200,40 +404,65 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
     // For easy graphing historical epoch rewards
     mapping(uint256 => uint256) public epochRewards;
 
-    function getEpochRewards(uint256 _epoch) external view returns (uint256) {
-        return epochRewards[_epoch];
+    function setEpochRewards() external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        epochRewards[epoch] = rewardsInThisEpoch;
+        epoch++;
     }
 
     /*
-         ROUTEER
+         ROUTER
     */
 
-    // Lottery tracking
-    struct LotteryTicket {
-        address owner;
-        uint256 levelOneChance;
-        uint256 levelTwoChance;
-        uint256 levelThreeChance;
-        uint256 levelFourChance;
-        uint256 levelFiveChance;
-    }
-    uint256 public ticketCount;
+    // Mapping of (user => last ticket level)
+    mapping(address => uint256) public lastTicketLevel;
 
-    mapping(uint256 => LotteryTicket) public tickets;
+    // Setter for contracts using
+    function setLastTicketLevel(address _user, uint256 _level) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        lastTicketLevel[_user] = _level;
+    }
+
     // Total eth contributed to a vault.
     mapping(address => uint256) public liquidityContributedEthValue;
-    mapping(address => uint256) public lastTicketLevel; // Mapping of (user => last ticket level)
+
+    // Set value for mapping from external contracts
+    function setLiquidityContributedEthValue(
+        address _spender,
+        uint256 _amount,
+        bool _delete
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        if (_delete) {
+            delete liquidityContributedEthValue[_spender];
+        } else {
+            liquidityContributedEthValue[_spender] = liquidityContributedEthValue[_spender]
+                .add(_amount);
+        }
+    }
 
     // NFT STUFF
-    mapping(uint256 => address) public _NFTs; // Mapping of (level number => NFT address)
-    // Properties per NFT, not per uniqueId.
+    // Mapping of (level number => NFT address)
+    mapping(uint256 => address) public _NFTs;
+
+    // Property object, extra field for arbirtrary values in future
     struct NFTProperty {
         string pType;
         uint256 pValue;
-        bytes32 extra; // for something, dunno yet;
+        bytes32 extra;
     }
 
-    mapping(address => NFTProperty[]) public nftProperties;
+    mapping(address => NFTProperty[]) public nftPropertyChoices;
+
+    function setNFTPropertiesForContract(
+        address _contractAddress,
+        NFTProperty[] memory _properties
+    ) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        for (uint256 i; i < _properties.length; i++) {
+            nftPropertyChoices[_contractAddress].push(_properties[i]);
+        }
+    }
 
     function getNFTAddress(uint256 _contractId)
         external
@@ -253,7 +482,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         )
     {
         address NFTAddress = _NFTs[_contractId];
-        NFTProperty memory properties = nftProperties[NFTAddress][_index];
+        NFTProperty memory properties = nftPropertyChoices[NFTAddress][_index];
 
         return (properties.pType, properties.pValue, properties.extra);
     }
@@ -264,7 +493,7 @@ contract YGYStorageV1 is OwnableUpgradeSafe {
         returns (uint256)
     {
         address NFTAddress = _NFTs[_contractId];
-        NFTProperty[] memory properties = nftProperties[NFTAddress];
+        NFTProperty[] memory properties = nftPropertyChoices[NFTAddress];
         return properties.length;
     }
 

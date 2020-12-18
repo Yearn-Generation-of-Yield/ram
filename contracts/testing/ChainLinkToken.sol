@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
-import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
 import "./IReceiverMock.sol";
-import "./VRFConsumerBase.sol";
+import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
 
 contract ChainLinkToken is ERC20PresetMinterPauser {
     constructor(

@@ -51,7 +51,7 @@ contract UniswapV2ERC20 {
     }
 
     function _burn(address from, uint256 value) internal {
-        console.log("Addusting total supply of LP");
+        console.log("Adjusting total supply of LP");
         balanceOf[from] = balanceOf[from].sub(value);
         totalSupply = totalSupply.sub(value);
         emit Transfer(from, address(0), value);

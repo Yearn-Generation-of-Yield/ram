@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
+import "../YGYStorageV1.sol";
 
 interface INFT {
-    function mint(address _to) external returns (uint256);
+    function mint(
+        address _to,
+        uint256 _randomness,
+        YGYStorageV1 _storage
+    ) external returns (uint256);
 
-    // function undelegate(address _who, uint256 _tokenId) external;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) external;
 
-    // function delegate(address _to) external returns (uint256);
-
-    // function hasDelegation(address _who) external view returns (bool);
     function totalSupply() external view returns (uint256);
 
     function _tokenURI() external view returns (string memory);
@@ -20,4 +26,5 @@ interface INFT {
     function name() external view returns (string memory);
 
     function balanceOf(address owner) external view returns (uint256);
+
 }

@@ -2,20 +2,27 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./YGYStorageV1.sol";
 import "./interfaces/INFT.sol";
+import "./interfaces/IRAMVault.sol";
 import "./NFT.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "./StorageState.sol";
 
-contract NFTFactory is OwnableUpgradeSafe, YGYStorageV1 {
+contract NFTFactory is StorageState, OwnableUpgradeSafe {
     address[] public contracts;
-    address public lastContractAddress;
     address public bondedContract;
-
-    mapping(address => bool) public ownedContracts;
+    IRAMVault ramVault;
+    // address public lastContractAddress;
+    mapping(address => bool) public inUse;
 
     event NFTMinted(string tokenName, address to, uint256 tokenId);
     event NFTBurned(string tokenName, address from, uint256 tokenId);
+
+    constructor(YGYStorageV1 __storage) public {
+        __Ownable_init();
+        _storage = __storage;
+    }
 
     function deployNFT(
         string memory name,
@@ -26,12 +33,14 @@ contract NFTFactory is OwnableUpgradeSafe, YGYStorageV1 {
         address admin,
         bool allowTrade,
         bool isCapped,
-        uint256 capAmount
+        uint256 capAmount,
+        address _ramVault
     ) public returns (NFT newContract) {
         require(
             _msgSender() == owner() || _msgSender() == bondedContract,
             "Invalid caller: can't deploy NFT"
         );
+        ramVault = IRAMVault(_ramVault);
 
         // Deploy new NFT
         NFT nft = new NFT(
@@ -43,29 +52,16 @@ contract NFTFactory is OwnableUpgradeSafe, YGYStorageV1 {
             admin,
             allowTrade,
             isCapped,
-            capAmount
+            capAmount,
+            _ramVault
         );
 
         address addressNFT = address(nft);
 
         // Add to owned NFTs
         contracts.push(addressNFT);
-        lastContractAddress = addressNFT;
-        ownedContracts[addressNFT] = true;
 
         return nft;
-    }
-
-    function isOwner(
-        INFT _nft,
-        address _who,
-        uint256 tokenId
-    ) external view returns (bool) {
-        return _nft.ownerOf(tokenId) == _who;
-    }
-
-    function tokenURI(INFT _nft) external view returns (string memory) {
-        return _nft._tokenURI();
     }
 
     function balanceOf(INFT _nft, address _who)
@@ -76,12 +72,21 @@ contract NFTFactory is OwnableUpgradeSafe, YGYStorageV1 {
         return _nft.balanceOf(_who);
     }
 
-    function mint(INFT _nft, address _to) external returns (uint256) {
-        require(
-            _msgSender() == bondedContract || _msgSender() == owner(),
-            "INVCALLER"
-        );
-        uint256 tokenId = _nft.mint(_to);
+    function isOwner(INFT _nft, address _who, uint256 _tokenId)
+        external
+        view
+        returns (bool)
+    {
+        return _nft.ownerOf(_tokenId) == _who;
+    }
+
+    function mint(
+        INFT _nft,
+        address _to,
+        uint256 _randomness
+    ) external returns (uint256) {
+        require(_msgSender() == bondedContract || _msgSender() == owner());
+        uint256 tokenId = _nft.mint(_to, _randomness, _storage);
         emit NFTMinted(_nft.name(), _to, tokenId);
         return tokenId;
     }
@@ -89,25 +94,36 @@ contract NFTFactory is OwnableUpgradeSafe, YGYStorageV1 {
     function burn(INFT _nft, uint256 _tokenId) external {
         require(
             _nft.ownerOf(_tokenId) == _msgSender() ||
-                _msgSender() == bondedContract,
-            "INVCALLER"
+                _msgSender() == bondedContract
         );
         _nft.burn(_tokenId);
         emit NFTBurned(_nft.name(), _msgSender(), _tokenId);
     }
 
-    function setNFTProperties(address _nft, NFTProperty[] memory _properties)
-        external
-        onlyOwner
-    {
-        NFTProperty[] storage properties;
-        for (uint256 i; i < _properties.length; i++) {
-            properties.push(_properties[i]);
-        }
-        nftProperties[_nft] = properties;
+    function setNFTProperties(
+        address _nft,
+        YGYStorageV1.NFTProperty[] memory _properties
+    ) external {
+        require(msg.sender == owner());
+        _storage.setNFTPropertiesForContract(_nft, _properties);
     }
 
-    function bondContract(address _addr) external onlyOwner returns (bool) {
+    function useNFT(
+        INFT _nft,
+        uint256 _tokenId,
+        uint256 _poolId
+    ) public {
+        require(_nft.ownerOf(_tokenId) == msg.sender, "User not owner");
+        _nft.transferFrom(msg.sender, address(ramVault), _tokenId);
+        ramVault.NFTUsage(msg.sender, address(_nft), _tokenId, _poolId);
+    }
+
+    function setNFTUsage(address _nft, bool _inUse) external onlyOwner {
+        inUse[_nft] = _inUse;
+    }
+
+    function bondContract(address _addr) external returns (bool) {
+        require(msg.sender == owner());
         bondedContract = _addr;
         return true;
     }

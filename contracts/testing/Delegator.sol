@@ -9,7 +9,6 @@ contract Delegator {
     constructor(address _implementation) public {
         owner = msg.sender;
         implementation = _implementation;
-        console.log("implementation set", implementation);
     }
 
     function setOwner(address payable _newOwner) external {
