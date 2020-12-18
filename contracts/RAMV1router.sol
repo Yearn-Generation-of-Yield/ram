@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import "./uniswapv2/libraries/Math.sol";
 import "./uniswapv2/libraries/UniswapV2Library.sol";
 import "./interfaces/INFT.sol";

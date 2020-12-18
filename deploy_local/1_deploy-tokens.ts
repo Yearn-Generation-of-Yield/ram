@@ -11,9 +11,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, teamaddr, user1 } = await getNamedAccounts();
 
   //@ts-ignore
-  const deployerSigner = await ethers.getSigner(deployer);
+  const user1Signer = await ethers.getSigner(user1);
   //@ts-ignore
-  const UNIFactory = await ethers.getContractAt("UniswapV2Factory", "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", deployerSigner);
+  const UNIFactory = await ethers.getContract("UniswapV2Factory");
+
+  await deploy("ChainLinkToken", {
+    from: deployer,
+    log: true,
+    args: ["LINK", "LINK", parseEther("20000")],
+  });
   separator();
 
   // deploy testnet tokens
@@ -25,7 +31,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   separator();
 
   const weth = await ethers.getContractAt("WETH9", WETH.address);
-  await weth.connect(deployerSigner).deposit({ from: user1, value: parseEther("0.1") });
+  weth.deposit({ from: deployer, value: parseEther("500") });
+  weth.connect(user1Signer).deposit({ from: user1, value: parseEther("50") });
 
   const YGY = await deploy("YGY", {
     from: deployer,
