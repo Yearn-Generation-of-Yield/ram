@@ -1,5 +1,9 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "add-pool": "npx hardhat run scripts/add-pool.js",
+    "check-allowance": "npx hardhat run scripts/check-allowance.js"
+  },
   "devDependencies": {
     "@chainlink/contracts": "^0.0.11",
     "@ethersproject/keccak256": "^5.0.6",

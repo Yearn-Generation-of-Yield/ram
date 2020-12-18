@@ -8,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { parseEther, formatEther } = ethers.utils;
   const { deploy } = deployments;
 
-  const { deployer, teamaddr, user1 } = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
 
   //@ts-ignore
   const deployerSigner = await ethers.getSigner(deployer);
@@ -23,9 +23,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   separator();
-
-  const weth = await ethers.getContractAt("WETH9", WETH.address);
-  await weth.connect(deployerSigner).deposit({ from: user1, value: parseEther("0.1") });
 
   const YGY = await deploy("YGY", {
     from: deployer,
@@ -46,7 +43,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy("dXIOT", {
     from: deployer,
     log: true,
-    args: ["dXIOT", "dXIOT", parseEther("20000")],
+    args: ["dXIOT", "dXIOT", parseEther("2000000")],
   });
   separator();
 };

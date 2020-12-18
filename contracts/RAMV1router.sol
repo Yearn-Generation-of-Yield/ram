@@ -4,10 +4,11 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+// import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import "./uniswapv2/libraries/Math.sol";
 import "./uniswapv2/libraries/UniswapV2Library.sol";
 import "./interfaces/INFT.sol";
+import "./VRFConsumerBase.sol";
 import "./interfaces/INFTFactory.sol";
 import "./interfaces/IFeeApprover.sol";
 import "./interfaces/IRAMVault.sol";
@@ -94,8 +95,8 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         _YGYToken = _storage._YGYToken();
         _YGYWETHPair = _storage._YGYWETHPair();
         _RAMToken = _storage._RAMToken();
-        _WETH = _storage._WETH();
-        _dXIOTToken = _storage._dXIOTToken();
+        _WETH = IWETH(_storage._WETH());
+        _dXIOTToken = IERC20(_storage._dXIOTToken());
         refreshApproval();
     }
 
@@ -227,12 +228,13 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
 
         _addLiquidity(outRAM, buyAmount, to, autoStake);
 
-        // TODO: CHANGE TO TEH CORRECT ADDRESS
-        _dXIOTToken.transferFrom(
-            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,
-            to,
-            1 * 1e18
-        );
+        if(_dXIOTToken.balanceOf(address(this)) > 1 * 1e18) {
+            _dXIOTToken.transferFrom(
+                address(this),
+                to,
+                1 * 1e18
+            );
+        }
 
         generateLotteryTickets(to);
         sync();

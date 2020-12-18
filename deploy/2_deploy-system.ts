@@ -1,5 +1,5 @@
-import { VaultProxy } from "./../types/VaultProxy.d";
-import { RAMVault } from "./../types/RAMVault.d";
+import { VaultProxy } from "../types/VaultProxy";
+import { RAMVault } from "../types/RAMVault";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { keccak256 } from "ethers/lib/utils";
@@ -292,13 +292,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("RAMRouter at:", RAMROUTER.address);
   separator();
 
+  console.log(
+    "Adding modifier rights for vault @ ",
+    VaultProxy.address,
+    " - router @ ",
+    RAMROUTER.address,
+    " - NFTFactory @ ",
+    NFTFACTORY.address
+  );
   tx = await YGYStorage.setModifierContracts(VaultProxy.address, RAMROUTER.address, NFTFACTORY.address);
   await tx.wait();
+  console.log("Modifiers added");
   // Get router instnace
   const RAMRouter = await ethers.getContractAt("RAMv1Router", RAMROUTER.address, deployerSigner);
 
   // Initialize tokens
-  await RAMRouter.setTokens();
+  tx = await RAMRouter.setTokens();
+  await tx.wait();
   console.log("RAMRouter tokens set");
   separator();
 
@@ -310,25 +320,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
 
+  // SET MAINNETs
   const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
-  // // * NOTE: Initial LP supply used with the uniswap router
-  // await deploy("UniswapV2Router02", {
-  //   from: deployer,
-  //   log: true,
-  //   args: [UNIFactory.address, WETH.address],
-  // });
-
-  //@ts-ignore
-  // const Router = await ethers.getContract("UniswapV2Router02");
 
   tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
   tx = await YGY.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
-  const balance = await RAM.balanceOf(deployer);
-  const balanceYGY = await YGY.balanceOf(deployer);
-  const balanceYGYRAM = await RAM.balanceOf(YGYRAMAddr);
-  const initialSupplyTx = await Router.addLiquidity(
+
+  tx = await Router.addLiquidity(
     YGY.address,
     RAM.address,
     parseEther("10000"),
@@ -338,21 +338,33 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     deployer,
     Date.now() + 100000000 / 1000
   );
-  await initialSupplyTx.wait();
-
-  tx = await WETH.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
-  const initialYGYWETH = await Router.addLiquidity(
+
+  tx = await WETH.connect(deployerSigner).approve(Router.address, MAX_INT);
+  tx = await WETH.connect(deployerSigner).approve(RAMRouter.address, MAX_INT);
+  await tx.wait();
+
+  console.log("Adding liquidity to YGYWETH");
+  const weth = await ethers.getContractAt("WETH9", WETH.address);
+  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("1") });
+  await tx.wait();
+
+  tx = await Router.addLiquidity(
     YGY.address,
     WETH.address,
-    parseEther("0.05"),
-    parseEther("0.05"),
-    parseEther("0.05"),
-    parseEther("0.05"),
+    parseEther("10"),
+    parseEther("1"),
+    parseEther("10"),
+    parseEther("1"),
     deployer,
-    Date.now() + 100000000 / 1000
+    Date.now() + 1000000 / 1000
   );
-  await initialYGYWETH.wait();
+
+  await tx.wait();
+
+  tx = await YGYRAMPair.sync();
+  await tx.wait();
+
   tx = await FeeApprover.sync();
   await tx.wait();
 
@@ -362,6 +374,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await YGY.approve(RAMRouter.address, MAX_INT);
   await tx.wait();
   tx = await dXIOT.approve(RAMRouter.address, MAX_INT);
+  await tx.wait();
+
+  console.log("transferring DXIOT to router");
+  tx = await dXIOT.transfer(RAMRouter.address, parseEther("20000"));
   await tx.wait();
   // // Bond NFT factory and deploy NFTs using RAM router
   tx = await NFTFactory.bondContract(RAMRouter.address);

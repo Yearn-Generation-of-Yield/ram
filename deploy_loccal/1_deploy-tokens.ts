@@ -8,10 +8,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { parseEther, formatEther } = ethers.utils;
   const { deploy } = deployments;
 
-  const { deployer, teamaddr, user1 } = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
 
-  //@ts-ignore
-  const user1Signer = await ethers.getSigner(user1);
   //@ts-ignore
   const UNIFactory = await ethers.getContract("UniswapV2Factory");
 
@@ -29,10 +27,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   separator();
-
-  const weth = await ethers.getContractAt("WETH9", WETH.address);
-  weth.deposit({ from: deployer, value: parseEther("500") });
-  weth.connect(user1Signer).deposit({ from: user1, value: parseEther("50") });
 
   const YGY = await deploy("YGY", {
     from: deployer,
@@ -53,7 +47,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy("dXIOT", {
     from: deployer,
     log: true,
-    args: ["dXIOT", "dXIOT", parseEther("20000")],
+    args: ["dXIOT", "dXIOT", parseEther("2000000")],
   });
   separator();
 };
