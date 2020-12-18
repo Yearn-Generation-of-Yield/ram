@@ -106,7 +106,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
     // Also dismisses NFT boost effects
     // Because averge since start will not be accurate
     function startNewEpoch() public {
-        // require(_storage.epochCalculationStartBlock() + 5760 < block.number); // about 3 days.
+        require(_storage.epochCalculationStartBlock() + 5760 < block.number); // about 3 days.
         _storage.setEpochRewards();
         _storage.setCumulativeRewardsSinceStart();
         _storage.setRewardsInThisEpoch(0);
