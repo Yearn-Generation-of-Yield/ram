@@ -60,7 +60,8 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
-    uint256 public constant initialSupply = 100000e18; // 10k
+
+    uint256 public constant tokenCap = 100000e18; // 100k
     uint256 public contractStartTimestamp;
 
     /**
@@ -70,21 +71,15 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         return _name;
     }
 
-    function initialSetup(address factory) internal {
-        _name = "RAM Token";
+    function initialSetup(address _factory, address _ygy, address _treasury) internal {
+        _name = "RAM";
         _symbol = "RAM";
         _decimals = 18;
-        _mint(msg.sender, initialSupply); // TEST MOCK
-        // _mint(address(this), initialSupply); // TODO: production
+        _mint(_treasury, tokenCap);
 
         contractStartTimestamp = block.timestamp;
-        // uniswapRouterV2 = IUniswapV2Router02(router != address(0) ? router : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // For testing
-        uniswapFactory = IUniswapV2Factory(
-            factory != address(0)
-                ? factory
-                : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
-        ); // For testing
-        // createUniswapPairMainnet(_YGY); // TODO: uncomment for production
+        uniswapFactory = IUniswapV2Factory(_factory);
+        createUniswapPair(_ygy);
     }
 
     /**
@@ -133,10 +128,9 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
     address public tokenUniswapPair;
 
-    function createUniswapPairMainnet(address _YGY) public returns (address) {
+    function createUniswapPair(address _YGY) internal {
         require(tokenUniswapPair == address(0), "Token: pool already created");
         tokenUniswapPair = uniswapFactory.createPair(_YGY, address(this));
-        return tokenUniswapPair;
     }
 
     /**
@@ -307,7 +301,6 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
     ) internal virtual {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
-
         _beforeTokenTransfer(sender, recipient, amount);
 
         _balances[sender] = _balances[sender].sub(
@@ -451,5 +444,13 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
         address from,
         address to,
         uint256 amount
-    ) internal virtual {}
+    ) internal view {
+            // if(tokenUniswapPair != address(0)) {
+            // console.log(from, tokenUniswapPair);
+            // require(from != tokenUniswapPair, "Cannot unwrap liquidity");
+            // }
+        if(from == address(0)) {
+            require(_totalSupply.add(amount) <= tokenCap, "Token cap reached");
+        }
+    }
 }

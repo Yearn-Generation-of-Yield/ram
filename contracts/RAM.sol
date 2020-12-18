@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 import "./NBUNIERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
-// RamToken with Governance.
+// RAM-Token with Governance.
 contract RAM is NBUNIERC20 {
     /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with
@@ -15,24 +15,9 @@ contract RAM is NBUNIERC20 {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor(address factory) public {
-        initialSetup(factory);
-        // _name = name;
-        // _symbol = symbol;
-        // _decimals = 18;
-        // _totalSupply = initialSupply;
-        // _balances[address(this)] = initialSupply;
-        // contractStartTimestamp = block.timestamp;
-        // // UNISWAP
-        // IUniswapV2Router02(router != address(0) ? router : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f); // For testing
-        // IUniswapV2Factory(factory != address(0) ? factory : 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f); // For testing
+    constructor(address factory, address _ygy, address _treasury) public {
+        initialSetup(factory, _ygy, _treasury);
     }
-
-    // Copied and modified from YAM code:
-    // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernanceStorage.sol
-    // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernance.sol
-    // Which is copied and modified from COMPOUND:
-    // https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/Comp.sol
 
     /// @notice A record of each accounts delegate
     mapping(address => address) internal _delegates;

@@ -72,6 +72,14 @@ contract NFTFactory is StorageState, OwnableUpgradeSafe {
         return _nft.balanceOf(_who);
     }
 
+    function isOwner(INFT _nft, address _who, uint256 _tokenId)
+        external
+        view
+        returns (bool)
+    {
+        return _nft.ownerOf(_tokenId) == _who;
+    }
+
     function mint(
         INFT _nft,
         address _to,
@@ -105,7 +113,7 @@ contract NFTFactory is StorageState, OwnableUpgradeSafe {
         uint256 _tokenId,
         uint256 _poolId
     ) public {
-        require(_nft.ownerOf(_tokenId) == msg.sender);
+        require(_nft.ownerOf(_tokenId) == msg.sender, "User not owner");
         _nft.transferFrom(msg.sender, address(ramVault), _tokenId);
         ramVault.NFTUsage(msg.sender, address(_nft), _tokenId, _poolId);
     }

@@ -39,8 +39,8 @@ describe("Vault + Router", () => {
     await setTestVars(this, ethers, deployments);
     const endUsers = this.users.slice(4, this.users.length);
     // Transfer some tokens for users
-    this.userBaseYGYBalance = parseEther("750");
-    this.userBaseRAMBalance = parseEther("500");
+    this.userBaseYGYBalance = parseEther("1000");
+    this.userBaseRAMBalance = parseEther("1000");
     await Promise.all(
       endUsers.map(async ({ address }) => {
         await this.YGY.transfer(address, this.userBaseYGYBalance);
@@ -61,9 +61,10 @@ describe("Vault + Router", () => {
   it("RAMRouter: Should be able to add liquidity with only YGY", async () => {
     const user = this.users[4];
     const DepositAmount = 100;
-    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(this.parseEther(DepositAmount.toString()), false).should.be.fulfilled;
-    const balanceOfUser = this.formatResult(await this.YGY.balanceOf(user.address));
-    balanceOfUser.should.be.equal(this.formatResult(this.userBaseYGYBalance) - DepositAmount);
+    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(parseEther(DepositAmount.toString()), false).should.be.fulfilled;
+    console.log(this.YGY.address, user.address);
+    const balanceOfUser = await this.YGY.balanceOf(user.address);
+    (balanceOfUser / 1e18).should.be.equal(parseFloat(formatEther(this.userBaseYGYBalance)) - DepositAmount);
 
     const YGYRAMBalanceOfUser = this.formatResult(await this.YGYRAMPair.balanceOf(user.address));
     console.log("YGYRAMBalance with 100 YGY deposit: ", YGYRAMBalanceOfUser);
@@ -112,10 +113,12 @@ describe("Vault + Router", () => {
     await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     // Auto-stake dude
-    await this.RAMRouter.addLiquidityETHOnly(user.address, true, { value: parseEther("2") }).should.be.fulfilled;
+    await this.RAMRouter.addLiquidityETHOnly(user.address, true, { value: parseEther("1") }).should.be.fulfilled;
+
     const userBefore = await this.Storage.userInfo(0, user.address);
     Number(userBefore.boostLevel).should.be.equal(0);
-    (userBefore.amount / 1e18).should.be.greaterThan(2);
+    (userBefore.amount / 1e18).should.be.greaterThan(0);
+    console.log("User got", userBefore.amount / 1e18, "LP tokens with 1 ETH");
     Number(userBefore.boostAmount).should.be.equal(0);
 
     const poolBeforeFirstBost = await this.Storage.poolInfo(0);
@@ -132,15 +135,15 @@ describe("Vault + Router", () => {
     Number(poolAfterFirstBoost.effectiveAdditionalTokensFromBoosts).should.be.equal(Number(userAfter.boostAmount));
 
     // Manual deposit for this guy
-    await this.RAMRouter.addLiquidityETHOnly(user2.address, false, { value: parseEther("5") }).should.be.fulfilled;
+    await this.RAMRouter.addLiquidityETHOnly(user2.address, false, { value: parseEther("1") }).should.be.fulfilled;
     const User2LPBalance = await this.YGYRAMPair.balanceOf(user2.address);
-    (User2LPBalance / 1e18).should.be.greaterThan(50);
-    await this.RAMVault.connect(user2.signer).deposit(0, parseEther("50"));
+    (User2LPBalance / 1e18).should.be.greaterThan(0);
+    await this.RAMVault.connect(user2.signer).deposit(0, User2LPBalance);
 
     // Before boost stats
     const user2Before = await this.Storage.userInfo(0, user2.address);
     Number(user2Before.boostLevel).should.be.equal(0);
-    (user2Before.amount / 1e18).should.be.equal(50);
+    (user2Before.amount / 1e18).should.be.equal(User2LPBalance / 1e18);
     Number(user2Before.boostAmount).should.be.equal(0);
 
     // For pool aswell
@@ -166,11 +169,11 @@ describe("Vault + Router", () => {
     );
 
     // Withdraw half for user 2
-    await this.RAMVault.connect(user2.signer).withdraw(0, parseEther("25"));
+    await this.RAMVault.connect(user2.signer).withdraw(0, parseEther((user2Before.amount / 1e18 / 2).toString()));
     const user2AfterWithdraw = await this.Storage.userInfo(0, user2.address);
-    (user2AfterWithdraw.amount / 1e18).should.equal(user2After.amount / 1e18 / 2);
+    (user2AfterWithdraw.amount / 1e18).should.be.closeTo(user2After.amount / 1e18 / 2, 0.001);
     Number(user2AfterWithdraw.boostLevel).should.equal(3);
-    (user2AfterWithdraw.boostAmount / 1e18).should.equal(user2After.boostAmount / 1e18 / 2);
+    (user2AfterWithdraw.boostAmount / 1e18).should.be.closeTo(user2After.boostAmount / 1e18 / 2, 0.001);
 
     // Withdraw all for user 1
     await this.RAMVault.connect(user.signer).withdraw(0, userBefore.amount);
@@ -180,7 +183,7 @@ describe("Vault + Router", () => {
     Number(userAfterWithdraw.boostAmount).should.equal(0);
 
     // Withdraw all for user 2
-    await this.RAMVault.connect(user2.signer).withdraw(0, parseEther("25"));
+    await this.RAMVault.connect(user2.signer).withdraw(0, user2AfterWithdraw.amount);
     const user2AfteFullWithdraw = await this.Storage.userInfo(0, user2.address);
     Number(user2AfteFullWithdraw.amount).should.equal(0);
     Number(user2AfteFullWithdraw.boostLevel).should.equal(3);
@@ -231,7 +234,7 @@ describe("Vault + Router", () => {
 
     // Advance time forward a month
     await time.increase(time.duration.weeks(4));
-    await this.RAMVault.connect(user.signer).withdraw(0, parseEther("5"));
+    await this.RAMVault.connect(user.signer).withdraw(0, parseEther("1"));
 
     const afterBalUser = (await this.RAM.balanceOf(user.address)) / 1e18;
     const afterBalVault = (await this.RAM.balanceOf(this.RAMVault.address)) / 1e18;

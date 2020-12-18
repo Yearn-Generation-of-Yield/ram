@@ -112,8 +112,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     true,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
   const NFT2TX = await NFTFactory.deployNFT(
     "RAM LEVEL 2",
@@ -125,8 +124,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     true,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
   const NFT3TX = await NFTFactory.deployNFT(
     "RAM LEVEL 3",
@@ -138,8 +136,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     true,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
   const NFT4TX = await NFTFactory.deployNFT(
     "RAM LEVEL 4",
@@ -151,8 +148,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     true,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
 
   const NFT5TX = await NFTFactory.deployNFT(
@@ -165,8 +161,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     true,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
   const NFT6TX = await NFTFactory.deployNFT(
     "ROBOT",
@@ -178,8 +173,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     false,
     true,
     50,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
   const NFT7TX = await NFTFactory.deployNFT(
     "LINK",
@@ -191,8 +185,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     false,
     false,
     MAX_INT,
-    VAULTPROXY.address,
-    { from: deployer }
+    VAULTPROXY.address
   );
 
   const receipts = await Promise.all([
@@ -208,6 +201,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   receipts.forEach((receipt) => {
     nfts.push(receipt.logs[0].address);
   });
+
+  console.table(nfts);
 
   // Robot and LINK nft share same props.
   await YGYStorage.setNFTPropertiesForContract(nfts[0], [
@@ -235,22 +230,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Total NFTs deployed: ", nfts.length);
   separator();
 
-  /** GENERATE UNI PAIRS */
-
+  /** GENERATE YGY-WETH UNI PAIR   (TEST-ONLY) */
   const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
-  const pairtx2 = await UNIFactory.createPair(RAM.address, YGY.address, { from: deployer });
   const txres = await pairtx1.wait();
-  const txres2 = await pairtx2.wait();
 
   // Pair address is third arg for the PairCreated event.
   const YGYWETHAddr = txres.events[0].args[2];
-  const YGYRAMAddr = txres2.events[0].args[2];
-  console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHAddr, "YGYRAM:", YGYRAMAddr);
+  const YGYRAMAddr = await RAM.tokenUniswapPair();
+  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", YGYRAMAddr);
+  const YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", YGYWETHAddr);
+  console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHPair.address, "YGYRAM:", YGYRAMPair.address);
+
   separator();
-
-  const YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", YGYWETHAddr, deployerSigner);
-  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", YGYRAMAddr, deployerSigner);
-
   /** FEEAPPROVER */
   const FEEAPPROVER = await deploy("FeeApprover", {
     from: deployer,
@@ -262,7 +253,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const FeeApprover = await ethers.getContractAt("FeeApprover", FEEAPPROVER.address, deployerSigner);
 
   // Now we can initialize the FeeApprover contract
-  await FeeApprover.initialize(RAM.address, YGY.address, UNIFactory.address);
+  await FeeApprover.initialize(RAM.address, YGY.address, UNIFactory.address, RAMVault.address);
   console.log("FeeApprover initialized");
   await FeeApprover.setPaused(false);
 
@@ -303,16 +294,46 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
 
-  // The next 3 commands simulate a LGE where RAM/WETH is contributed and the contributor receives RAMPair tokens
-  await YGY.transfer(YGYWETHAddr, parseEther("5000"));
-  await WETH.transfer(YGYWETHAddr, parseEther("500"));
-  await YGYWETHPair.mint(deployer);
-  await FeeApprover.sync();
+  // * NOTE: Initial LP supply used with the uniswap router
+  await deploy("UniswapV2Router02", {
+    from: deployer,
+    log: true,
+    args: [UNIFactory.address, WETH.address],
+  });
 
-  await YGY.transfer(YGYRAMAddr, parseEther("1000"));
-  await RAM.transfer(YGYRAMAddr, parseEther("10000"));
+  //@ts-ignore
+  const Router = await ethers.getContract("UniswapV2Router02");
 
-  await YGYRAMPair.mint(deployer);
+  await RAM.approve(Router.address, parseEther("1000000000000000000"));
+  await YGY.approve(Router.address, parseEther("1000000000000000000"));
+  const balance = await RAM.balanceOf(deployer);
+  const balanceYGY = await YGY.balanceOf(deployer);
+  const balanceYGYRAM = await RAM.balanceOf(YGYRAMAddr);
+  const initialSupplyTx = await Router.addLiquidity(
+    YGY.address,
+    RAM.address,
+    parseEther("10000"),
+    parseEther("10000"),
+    parseEther("10000"),
+    parseEther("10000"),
+    deployer,
+    Date.now() + 100000000 / 1000
+  );
+  await initialSupplyTx.wait();
+
+  await WETH.approve(Router.address, parseEther("1000000000000000000"));
+  await WETH.deposit({ value: parseEther("1000") });
+  const initialYGYWETH = await Router.addLiquidity(
+    YGY.address,
+    WETH.address,
+    parseEther("100"),
+    parseEther("100"),
+    parseEther("100"),
+    parseEther("100"),
+    deployer,
+    Date.now() + 100000000 / 1000
+  );
+  await initialYGYWETH.wait();
   await FeeApprover.sync();
 
   await ChainLink.approve(RAMRouter.address, MAX_INT);

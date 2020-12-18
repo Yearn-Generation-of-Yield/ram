@@ -47,7 +47,36 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
         uint256 boostAmount;
         uint256 boostLevel;
         uint256 spentMultiplierTokens;
-        bool hasNFTBoostApplied;
+    }
+
+    struct NFTUsage {
+        uint256 nftId;
+        uint256 epoch;
+    }
+
+    // Epoch -> User -> NFT ids in use.
+    mapping(uint256 => mapping(address => NFTUsage[])) public NFTUsageInfo;
+
+    function setNFTInUse(uint256 _nftId, address _user) external {
+        require(hasRole(MODIFIER_ROLE, _msgSender()));
+        NFTUsageInfo[epoch][_user].push(NFTUsage({ nftId: _nftId, epoch: epoch }));
+    }
+
+    function getNFTsInUse(address _user) external view returns (NFTUsage[] memory) {
+        return NFTUsageInfo[epoch][_user];
+    }
+
+    function getNFTBoost(address _user) external view returns (uint256) {
+        uint256 NFTBoost;
+        NFTUsage[] memory nftInfo = NFTUsageInfo[epoch][_user];
+        for(uint i; i < nftInfo.length; i++) {
+            if(epoch == nftInfo[i].epoch) {
+                if(nftInfo[i].nftId == 5 || nftInfo[i].nftId == 6) {
+                    NFTBoost = NFTBoost.add(10);
+                }
+            }
+        }
+        return NFTBoost;
     }
 
     // Pool/Vault/Whatever-id -> userrAddress -> userInfo
@@ -232,12 +261,6 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     }
 
     uint256 public cumulativeRewardsSinceStart;
-
-    function setEpochCalculationStartBlock(uint256 _amount) external {
-        require(hasRole(MODIFIER_ROLE, _msgSender()));
-        cumulativeRewardsSinceStart = _amount;
-    }
-
     uint256 public cumulativeYGYRewardsSinceStart;
 
     function setCumulativeRewardsSinceStart() external {
@@ -336,6 +359,7 @@ contract YGYStorageV1 is AccessControlUpgradeSafe {
     {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
+
         uint256 effectiveAmount = user.amount.add(user.boostAmount);
         uint256 YGYRewards;
         if (pool.accYGYPerShare > 0) {

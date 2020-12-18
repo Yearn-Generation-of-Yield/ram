@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
 // import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Metadata.sol";
-// import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Enumerable.sol";
+// import "@openzeppelin/contractss-ethereum-package/contracts/token/ERC721/IERC721Enumerable.sol";
 // import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/introspection/ERC165.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
@@ -377,6 +377,7 @@ contract ERC721 is
      * Emits a {Transfer} event.
      */
     function _safeMint(address to, uint256 tokenId) internal virtual {
+
         _safeMint(to, tokenId, "");
     }
 
@@ -417,8 +418,7 @@ contract ERC721 is
      */
     function mint(address to) internal returns (uint256 tokenId) {
         uint256 currentId = _tokenIdTracker.current();
-        console.log(currentId);
-        _safeMint(to, currentId);
+        _mint(to, currentId);
         _tokenIdTracker.increment();
         return currentId;
     }
@@ -561,5 +561,6 @@ contract ERC721 is
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual {}
+    ) internal virtual {
+    }
 }

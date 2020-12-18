@@ -1,4 +1,4 @@
-pragma solidity 0.6.12;
+pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
@@ -12,6 +12,7 @@ library UserHelper {
         view
         returns (uint256)
     {
+
         return self.amount.add(self.boostAmount);
     }
 
@@ -26,8 +27,7 @@ library UserHelper {
             uint256 rewardDebtYGY,
             uint256 boostAmount,
             uint256 boostLevel,
-            uint256 spentMultiplierTokens,
-            bool hasNFTBoostApplied
+            uint256 spentMultiplierTokens
         ) = _storage.userInfo(_poolId, _user);
 
         return
@@ -37,8 +37,7 @@ library UserHelper {
                 rewardDebtYGY: rewardDebtYGY,
                 boostAmount: boostAmount,
                 boostLevel: boostLevel,
-                spentMultiplierTokens: spentMultiplierTokens,
-                hasNFTBoostApplied: hasNFTBoostApplied
+                spentMultiplierTokens: spentMultiplierTokens
             });
     }
 
@@ -65,9 +64,11 @@ library UserHelper {
     function getTotalMultiplier(
         YGYStorageV1.UserInfo memory self,
         uint256 _level,
+        address _user,
         YGYStorageV1 _storage
     ) internal view returns (uint256) {
-        return _storage.getBoostLevelMultiplier(_level);
+        uint256 NFTBoost = _storage.getNFTBoost(_user);
+        return _storage.getBoostLevelMultiplier(_level).add(NFTBoost);
     }
 
     function updateDebts(
@@ -85,9 +86,9 @@ library UserHelper {
     function adjustEffectiveStake(
         YGYStorageV1.UserInfo memory self,
         YGYStorageV1.PoolInfo memory _pool,
+        address _user,
         uint256 _newLevel,
         bool _isWithdraw,
-        uint256 _nftBoost,
         YGYStorageV1 _storage
     ) internal view {
         uint256 prevBalancesAccounting = self.boostAmount;
@@ -95,18 +96,13 @@ library UserHelper {
         uint256 accTotalMultiplier = getTotalMultiplier(
             self,
             _newLevel > 0 ? _newLevel : self.boostLevel,
+            _user,
             _storage
         );
-
-        if (_nftBoost > 0) {
-            accTotalMultiplier = accTotalMultiplier.add(_nftBoost);
-            self.hasNFTBoostApplied = true;
-        }
 
         uint256 newBalancesAccounting = self.amount.mul(accTotalMultiplier).div(
             100
         );
-
         self.boostAmount = newBalancesAccounting;
 
         // Adjust total accounting supply accordingly

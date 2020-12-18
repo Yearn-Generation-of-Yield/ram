@@ -10,7 +10,7 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-    uint256 contractId;
+    uint256 public contractId;
 
     // Tradeable?
     bool allowTrade;
@@ -82,9 +82,10 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
         if (propertyChoices > 1) {
             propIndex = _randomness.mod(propertyChoices);
         }
+        console.log("in mint", propIndex, contractId);
         // Random properties gotten
         (string memory pType, uint256 pValue, bytes32 extra) = _storage
-            .getNFTProperty(contractId, propIndex);
+            .getNFTProperty(contractId + 1, propIndex);
 
         // Finally, set the property.
         properties[tokenId] = YGYStorageV1.NFTProperty(pType, pValue, extra);
@@ -116,10 +117,12 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
         address to,
         uint256 tokenId
     ) internal override {
+
         require(
             (allowTrade || hasRole(SYSTEM_ROLE, _msgSender())) ||
                 (!allowTrade && hasRole(SYSTEM_ROLE, to)),
             "External trades not allowed"
         );
+        console.log(from, to, name(), tokenId);
     }
 }

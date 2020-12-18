@@ -6,6 +6,7 @@ const setTestVars = async (that, ethers, deployments) => {
   that.Governance = await ethers.getContract("Governance");
   that.YGY = await ethers.getContract("YGY");
   that.RAM = await ethers.getContract("RAM");
+  that.dXIOT = await ethers.getContract("dXIOT");
   that.WETH = await ethers.getContract("WETH9");
   that.FeeApprover = await ethers.getContract("FeeApprover");
   that.ChainLink = await ethers.getContract("ChainLinkToken");
@@ -13,8 +14,8 @@ const setTestVars = async (that, ethers, deployments) => {
   that.Storage = await ethers.getContract("YGYStorageV1");
 
   // Test addresses
-  that.YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", "0xf6bfAFC3c2987aA67D620D6f2Ed576a4Dc84F662");
-  that.YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0x260FB9cc6a191e1fcD8a85e6f40D25b5E2245244");
+  that.YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", "0xEE75046FBF74f97380389AA26d9952E72e0E822B");
+  that.YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0x1D13930cD4a33a4A4D2038e4CAB566052485B8a1");
 };
 
 module.exports = {

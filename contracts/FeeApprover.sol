@@ -13,19 +13,26 @@ contract FeeApprover is OwnableUpgradeSafe {
     function initialize(
         address _RAMAddress,
         address _YGYAddress,
-        address _uniswapFactory
+        address _uniswapFactory,
+        address _ramVault
     ) public initializer {
         OwnableUpgradeSafe.__Ownable_init();
+
+        // Setup system addresses
         ramTokenAddress = _RAMAddress;
         ygyTokenAddress = _YGYAddress;
         tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(
             ygyTokenAddress,
             ramTokenAddress
         );
+
+        // Fee perrcents
         feePercentX100 = 10; // 1%
         paused = true; // We start paused until sync post LGE happens.
-        _editNoFeeList(0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f, true); // ramvault proxy
+
+        _editNoFeeList(_ramVault, true); // ramvault proxy
         _editNoFeeList(tokenUniswapPair, true);
+
         sync();
         minFinney = 5000;
     }

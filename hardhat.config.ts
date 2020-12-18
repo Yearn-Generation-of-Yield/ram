@@ -4,7 +4,7 @@ import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-deploy-ethers";
 // import "hardhat-typechain";
-// import "hardhat-contract-sizer";
+import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import { removeConsoleLog } from "hardhat-preprocessor";
 

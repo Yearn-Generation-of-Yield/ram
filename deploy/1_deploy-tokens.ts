@@ -8,20 +8,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { parseEther, formatEther } = ethers.utils;
   const { deploy } = deployments;
 
-  const { deployer, user1 } = await getNamedAccounts();
+  const { deployer, teamaddr, user1 } = await getNamedAccounts();
 
   //@ts-ignore
   const user1Signer = await ethers.getSigner(user1);
   //@ts-ignore
   const UNIFactory = await ethers.getContract("UniswapV2Factory");
-
-  await deploy("RAM", {
-    from: deployer,
-    log: true,
-    args: [UNIFactory.address],
-  });
-
-  separator();
 
   await deploy("ChainLinkToken", {
     from: deployer,
@@ -35,16 +27,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     log: true,
   });
+
   separator();
 
   const weth = await ethers.getContractAt("WETH9", WETH.address);
   weth.deposit({ from: deployer, value: parseEther("500") });
   weth.connect(user1Signer).deposit({ from: user1, value: parseEther("50") });
 
-  await deploy("YGY", {
+  const YGY = await deploy("YGY", {
     from: deployer,
     log: true,
-    args: ["YGY", "YGY", parseEther("200000")],
+    args: ["YGY", "YGY", parseEther("2000000")],
+  });
+
+  separator();
+
+  await deploy("RAM", {
+    from: deployer,
+    log: true,
+    args: [UNIFactory.address, YGY.address, deployer], //  *  MAINNET: REAL UNI, YGY AND TREASURYADDRESSES
   });
 
   separator();

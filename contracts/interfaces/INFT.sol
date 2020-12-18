@@ -26,4 +26,5 @@ interface INFT {
     function name() external view returns (string memory);
 
     function balanceOf(address owner) external view returns (uint256);
+
 }
