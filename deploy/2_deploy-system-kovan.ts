@@ -91,7 +91,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   /** NFT DEPLOYMENTS  */
   console.log("Deploying NFT 1");
   tx = await NFTFactory.deployNFT(
-    "RAM LEVEL 1",
+    "RAM1",
     "RAM1",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     0,
@@ -107,7 +107,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 2");
   tx = await NFTFactory.deployNFT(
-    "RAM LEVEL 2",
+    "RAM3",
     "RAM3",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     1,
@@ -123,7 +123,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 3");
   tx = await NFTFactory.deployNFT(
-    "RAM LEVEL 3",
+    "RAM3",
     "RAM3",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     2,
@@ -139,7 +139,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 4");
   tx = await NFTFactory.deployNFT(
-    "RAM LEVEL 4",
+    "RAM4",
     "RAM4",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     3,
@@ -156,7 +156,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 5");
   tx = await NFTFactory.deployNFT(
-    "RAM LEVEL 5",
+    "RAM5",
     "RAM5",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     4,
@@ -233,9 +233,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ["Even more special", 239329392, ethers.utils.formatBytes32String("Coming soon")],
   ]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("You are special")]]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your are special")]]);
   await tx.wait();
   console.log("Total NFTs deployed: ", nfts.length);
   separator();
@@ -322,11 +322,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // SET MAINNETs
   const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
 
+  console.log("Approving RAM & YGY for UNI Routter");
   tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
   tx = await YGY.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
 
+  console.log("Adding YGY RAM Liquidity");
   tx = await Router.addLiquidity(
     YGY.address,
     RAM.address,
@@ -339,6 +341,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   await tx.wait();
 
+  separator();
+
+  console.log("Approving weth");
   tx = await WETH.connect(deployerSigner).approve(Router.address, MAX_INT);
   await tx.wait();
   tx = await WETH.connect(deployerSigner).approve(RAMRouter.address, MAX_INT);
@@ -346,16 +351,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Adding liquidity to YGYWETH");
   const weth = await ethers.getContractAt("WETH9", WETH.address);
-  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("1") });
+  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("5") });
   await tx.wait();
 
   tx = await Router.addLiquidity(
     YGY.address,
     WETH.address,
-    parseEther("10"),
-    parseEther("1"),
-    parseEther("10"),
-    parseEther("1"),
+    parseEther("5000"),
+    parseEther("5"),
+    parseEther("5000"),
+    parseEther("5"),
     deployer,
     Date.now() + 1000000 / 1000
   );

@@ -105,7 +105,7 @@ describe("Vault + Router", () => {
     await this.RAMVault.connect(user2.signer).withdraw(0, user2LPBalance).should.be.fulfilled;
   });
 
-  it("RAMVault: YGY->RAM pool purchase boosts", async () => {
+  it.only("RAMVault: YGY->RAM pool purchase boosts", async () => {
     const user = this.users[4];
     const user2 = this.users[5];
 

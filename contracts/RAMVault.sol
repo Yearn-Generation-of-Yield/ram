@@ -235,8 +235,8 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
             user.amount = user.amount.add(_amount);
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
-            if (user.boostLevel > 0) {
-                user.adjustEffectiveStake(pool, msg.sender,  0,false, _storage);
+            if (user.boostAmount > 0 || user.boostLevel > 0) {
+                user.adjustEffectiveStake(pool, msg.sender,  0, false, _storage);
             }
         }
 
@@ -247,7 +247,22 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
     }
 
     function claimRewards(uint256 _pid) external {
+        YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(_pid, _storage);
+        YGYStorageV1.UserInfo memory user = UserHelper.getUser(
+            _pid,
+            msg.sender,
+            _storage
+        );
+
+        // Adjust the stake since user might have not acted after an epoch change and got boost amounts reduced
+        if (user.boostAmount > 0) {
+            user.adjustEffectiveStake(pool, msg.sender,  0, false, _storage);
+        }
         updateAndPayOutPending(_pid, msg.sender);
+
+        user.updateDebts(pool);
+        _storage.updateUserInfo(_pid, msg.sender, user);
+        _storage.updatePoolInfo(_pid, pool);
         emit RewardPaid(_pid, msg.sender);
     }
 
@@ -277,7 +292,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
             user.amount = user.amount.add(_amount); // This is depositedFor address
 
             // Users that have bought multipliers will have an extra balance added to their stake according to the boost multiplier.
-            if (user.boostAmount > 0) {
+           if (user.boostAmount > 0 || user.boostLevel > 0) {
                 user.adjustEffectiveStake(pool, _depositFor,  0, false, _storage);
             }
         }
@@ -347,7 +362,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
             pool.token.safeTransfer(address(to), _amount);
 
             // Users who have bought multipliers will have their accounting balances readjusted.
-            if (user.boostAmount > 0) {
+            if (user.boostAmount > 0 || user.boostLevel > 0) {
                 user.adjustEffectiveStake(pool, from, 0, true, _storage);
             }
         }
@@ -394,7 +409,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
     // !Caution this will remove all your pending rewards!
     function emergencyWithdraw(uint256 _pid) public {
         YGYStorageV1.PoolInfo memory pool = PoolHelper.getPool(_pid, _storage);
-        require(pool.withdrawable);
+        require(pool.withdrawable, "Pool not withdrawable");
         YGYStorageV1.UserInfo memory user = UserHelper.getUser(
             _pid,
             msg.sender,
@@ -438,7 +453,6 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
         // Update balances and level
         user.spentMultiplierTokens = user.spentMultiplierTokens.add(finalCost);
         user.boostLevel = _level;
-        console.log(_level);
 
         // If user has staked balances, then set their new accounting balance
         if (user.amount > 0) {
@@ -592,12 +606,13 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
         }
     }
 
-    function setDevFeeReciever(address _devaddr, address _teamaddr)
+    function setAddresses(address _devaddr, address _teamaddr, address _regeneratoraddr)
         external
         onlyOwner
     {
         devaddr = _devaddr;
         teamaddr = _teamaddr;
+        regeneratoraddr = _regeneratoraddr;
     }
 
     address private _superAdmin;

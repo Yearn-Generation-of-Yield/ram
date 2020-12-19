@@ -11,13 +11,26 @@ async function main() {
 
   //@ts-ignore
   const deployerSigner = await hre.ethers.getSigner(deployer);
+  const RAM = await ethers.getContract("RAM");
 
-  const VaultProxy = await ethers.getContract("VaultProxy");
-  const RAMVault = await ethers.getContractAt("RAMVault", VaultProxy.address, deployerSigner);
-  const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", "0xe603208F55678b4aBBF1Dd685622b2463C7Cda85");
-  console.log("Adding a pool for", YGYRAMPair.address);
-  let tx = await RAMVault.addPool(100, YGYRAMPair.address, true);
+  // console.log("doing 20 transfers");
+  // for (let i = 0; i < 20; i++) {
+  //   console.log("transfer", i + 1);
+  //   let tx = await RAM.transfer(deployer, ethers.utils.parseEther("1000"));
+  //   await tx.wait();
+  // }
+
+  const RAMVault = await ethers.getContractAt("RAMVault", "0x946068D93E69312f6dd7C5211CBFe0f7EC227a95");
+  console.log("mass update");
+  tx = await RAMVault.massUpdatePools();
   await tx.wait();
+
+  console.log("mass updated");
+  console.log("feeapprover sync");
+  const feeApprover = await ethers.getContract("FeeApprover");
+  tx = await feeApprover.sync();
+  await tx.wait();
+  console.log("feeapprover sync ed");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

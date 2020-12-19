@@ -106,6 +106,10 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         governance = _governance;
     }
 
+    function setRegenerator(address payable _regeneratoraddr) external onlyOwner {
+        regenerator = _regeneratoraddr;
+    }
+
     function setRegeneratorTax(uint256 _regeneratorTax) public {
         require(msg.sender == governance, "Locked to governance");
         regeneratorTax = _regeneratorTax;

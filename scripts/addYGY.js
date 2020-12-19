@@ -11,10 +11,10 @@ async function main() {
 
   //@ts-ignore
   const deployerSigner = await hre.ethers.getSigner(deployer);
-  const YGY = await ethers.getContractAt("YGY", "0x938842c3e97755D049b77FC586Dc26cB5d608911", deployerSigner);
-  await YGY.connect(deployerSigner).approve("0x98AA54AcA23d9fd3164798a6056E0371a56Db7A7", "100000000000000000000000");
+  const YGY = await ethers.getContract("YGY");
+  await YGY.connect(deployerSigner).approve("0x946068D93E69312f6dd7C5211CBFe0f7EC227a95", "100000000000000000000000");
 
-  const RAMVault = await ethers.getContractAt("RAMVault", "0x98AA54AcA23d9fd3164798a6056E0371a56Db7A7", deployerSigner);
+  const RAMVault = await ethers.getContractAt("RAMVault", "0x946068D93E69312f6dd7C5211CBFe0f7EC227a95", deployerSigner);
   let tx = await RAMVault.addYGYRewardsOwner(ethers.utils.parseEther("100"));
 
   await tx.wait();

@@ -9,7 +9,7 @@ library UserHelper {
 
     function effectiveAmount(YGYStorageV1.UserInfo memory self)
         internal
-        view
+        pure
         returns (uint256)
     {
 
@@ -74,7 +74,7 @@ library UserHelper {
     function updateDebts(
         YGYStorageV1.UserInfo memory self,
         YGYStorageV1.PoolInfo memory _pool
-    ) internal view {
+    ) internal pure {
         self.rewardDebt = effectiveAmount(self).mul(_pool.accRAMPerShare).div(
             1e12
         );
