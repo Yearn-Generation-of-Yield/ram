@@ -392,10 +392,10 @@ describe("Vault + Router", () => {
       Number(await this.RAM.balanceOf(this.dev)),
     ]);
 
-    // ygyTeamBalance.should.be.greaterThan(0);
-    // ygyDevBalance.should.be.greaterThan(0);
-    // ramTeamBalance.should.be.greaterThan(0);
-    // ramDevBalance.should.be.greaterThan(0);
+    ygyTeamBalance.should.be.greaterThan(0);
+    ygyDevBalance.should.be.greaterThan(0);
+    ramTeamBalance.should.be.greaterThan(0);
+    ramDevBalance.should.be.greaterThan(0);
     console.table([
       ["Team YGY balance:", ygyTeamBalance],
       ["Team RAM balance", ramTeamBalance],

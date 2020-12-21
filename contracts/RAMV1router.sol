@@ -48,6 +48,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     // Lottery tracking
     struct LotteryTicket {
         address owner;
+        uint256 roundNumber;
         uint256 levelOneChance;
         uint256 levelTwoChance;
         uint256 levelThreeChance;
@@ -55,8 +56,13 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         uint256 levelFiveChance;
     }
     uint256 public ticketCount;
+    uint256 public lotteryRoundCounter;
+    mapping(uint256 => uint256) public lotteryResults;
 
-    mapping(uint256 => LotteryTicket) public tickets;
+    // Mapping of user address => ticket number => ticket
+    mapping(address => mapping(uint256 => LotteryTicket)) public userTickets;
+    mapping(address => uint256) public userTicketCount;
+    mapping(address => uint256) public userTopTicketStack;
 
     // NFT
     INFTFactory public _NFTFactory;
@@ -376,7 +382,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         public
         returns (bytes32 requestId)
     {
-        console.log("here");
         require(
             LINK.transferFrom(msg.sender, address(this), rngLinkFee),
             "Not enough LINK approved to contract"
@@ -393,6 +398,8 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         override
     {
         randomResult = rand(randomness);
+        lotteryResults[lotteryRoundCounter] = randomResult;
+        lotteryRoundCounter = lotteryRoundCounter.add(1);
         INFT LinkNFT = INFT(_storage._NFTs(7));
         // Mint a LINK NFT to caller (only if they don't have one yet)
         if (LinkNFT.balanceOf(lotteryTriggerer) == 0) {
@@ -401,20 +408,37 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         lotteryTriggerer = address(0);
     }
 
-    function triggerLottery() external {
-        require(randomResult != 0, "No random number available");
-        applyRandomNumberToLottery();
-        randomResult = 0;
-    }
-
     function rand(uint256 randomness) private pure returns (uint256 result) {
         uint256 factor = (randomness * 100) / 100;
         return factor % 100;
     }
 
-    function applyRandomNumberToLottery() internal {
-        for (uint256 i = 0; i < ticketCount; i++) {
-            LotteryTicket memory ticket = tickets[i];
+    function claimTickets() public {
+        require(userTicketCount[msg.sender] > 0, "No tickets to claim");
+        applyRandomNumberToTickets(msg.sender);
+    }
+
+    function claimTicketsForAddr(address user) public {
+        require(userTicketCount[user] > 0, "No tickets to claim");
+        applyRandomNumberToTickets(user);
+    }
+
+    function applyRandomNumberToTickets(address user) internal {
+        uint256 topStack = userTopTicketStack[user];
+        uint256 ticketCount = userTicketCount[user];
+
+        uint256 topStackMem = topStack;
+        uint256 ticketCountMem = ticketCount;
+        for (uint256 i = topStack; i < topStack.add(ticketCount); i++) {
+            LotteryTicket memory ticket = userTickets[user][i];
+            uint256 ticketRoundNumber = ticket.roundNumber;
+
+            // Can't process active tickets, we need a round result first
+            if(lotteryRoundCounter == ticketRoundNumber) {
+                return;
+            }
+
+            uint256 roundResult = lotteryResults[ticketRoundNumber];
             if (randomResult <= ticket.levelOneChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(1)),
@@ -450,15 +474,17 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
                     randomResult
                 );
             }
+            // Increment top of user's ticket stack
+            topStackMem = topStackMem.add(1);
+            userTopTicketStack[user] = topStackMem;
 
-            _storage.setLiquidityContributedEthValue(ticket.owner, 0, true);
-            delete tickets[i];
-            _storage.setLastTicketLevel(ticket.owner, 0);
+            // Decrement size of user's ticket stack
+            ticketCountMem = ticketCountMem.sub(1);
+            userTicketCount[user] = ticketCountMem;
+
+            // Delete ticket
+            delete userTickets[user][i];
         }
-
-        // Reset lottery
-        randomResult = 0;
-        ticketCount = 0;
     }
 
     function getUserLotteryLevel(address user) public view returns (uint256) {
@@ -497,11 +523,13 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     function generateLotteryTickets(address user) internal {
         uint256 currentLevel = _storage.lastTicketLevel(user);
         uint256 newLevel = getUserLotteryLevel(user);
+        uint256 endStack = userTopTicketStack[user];
         for (uint256 i = currentLevel; i < newLevel; i++) {
             LotteryTicket memory ticket;
             if (i == 0) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 50,
                     levelTwoChance: 0,
                     levelThreeChance: 0,
@@ -511,6 +539,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 1) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 75,
                     levelTwoChance: 50,
                     levelThreeChance: 0,
@@ -520,6 +549,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 2) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 75,
                     levelThreeChance: 50,
@@ -529,6 +559,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 3) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 75,
@@ -538,6 +569,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 4) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 100,
@@ -548,6 +580,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             } else if (i == 5) {
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 100,
@@ -557,19 +590,23 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
                 // Level 7 is a winning ticket for each level + another winning ticket for levels 1-4
             } else if (i == 6) {
                 // Winning ticket (levels 1-5)
-                ticketCount++;
-                tickets[ticketCount] = LotteryTicket({
+                uint256 currUserTicketCount = userTicketCount[user];
+                uint256 insertAt = endStack.add(currUserTicketCount);
+                userTickets[user][insertAt] = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 100,
                     levelFourChance: 100,
                     levelFiveChance: 100
                 });
+                userTicketCount[user] = currUserTicketCount.add(1);
 
                 // Winning ticket (levels 1-4)
                 ticket = LotteryTicket({
                     owner: user,
+                    roundNumber: lotteryRoundCounter,
                     levelOneChance: 100,
                     levelTwoChance: 100,
                     levelThreeChance: 100,
@@ -580,8 +617,10 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
 
             // Add the ticket to the lottery
             if (ticket.owner != address(0)) {
-                ticketCount++;
-                tickets[ticketCount] = ticket;
+                uint256 currUserTicketCount = userTicketCount[user];
+                uint256 insertAt = endStack.add(currUserTicketCount);
+                userTickets[user][insertAt] = ticket;
+                userTicketCount[user] = currUserTicketCount.add(1);
             }
         }
 
