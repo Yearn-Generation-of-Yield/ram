@@ -1,0 +1,156 @@
+{
+  "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "n",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBlockhash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "n",
+          "type": "uint256"
+        }
+      ],
+      "name": "store",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "storeEarliest",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "n",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "header",
+          "type": "bytes"
+        }
+      ],
+      "name": "storeVerifyHeader",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xf4353070eb0f85ff9a88e86393121da2f0291371a3652f7ea6143e0486300bce",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+    "transactionIndex": 0,
+    "gasUsed": "212456",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x9b3cd8588229343c6534c80721e1958e49ccfe588e28fddff495e830ae2f97f5",
+    "transactionHash": "0xf4353070eb0f85ff9a88e86393121da2f0291371a3652f7ea6143e0486300bce",
+    "logs": [],
+    "blockNumber": 7,
+    "cumulativeGasUsed": "212456",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "solcInputHash": "974b6ecdd545dc7d442cb21ce5ea96e9",
+  "metadata": "{\"compiler\":{\"version\":\"0.6.12+commit.27d51765\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"getBlockhash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"store\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"storeEarliest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"}],\"name\":\"storeVerifyHeader\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"getBlockhash(uint256)\":{\"params\":{\"n\":\"the number of the block whose blockhash should be returned\"}},\"store(uint256)\":{\"params\":{\"n\":\"the number of the block whose blockhash should be stored\"}},\"storeVerifyHeader(uint256,bytes)\":{\"params\":{\"header\":\"the rlp-encoded blockheader of block n+1. We verify its correctness by checking   that it hashes to a stored blockhash, and then extract parentHash to get the n-th blockhash.\",\"n\":\"the number of the block whose blockhash should be stored\"}}},\"title\":\"BlockhashStore\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getBlockhash(uint256)\":{\"notice\":\"gets a blockhash from the store. If no hash is known, this function reverts.\"},\"store(uint256)\":{\"notice\":\"stores blockhash of a given block, assuming it is available through BLOCKHASH\"},\"storeEarliest()\":{\"notice\":\"stores blockhash of the earliest block still available through BLOCKHASH.\"},\"storeVerifyHeader(uint256,bytes)\":{\"notice\":\"stores blockhash after verifying blockheader of child/subsequent block\"}},\"notice\":\"This contract provides a way to access blockhashes older than   the 256 block limit imposed by the BLOCKHASH opcode.   You may assume that any blockhash stored by the contract is correct.   Note that the contract depends on the format of serialized Ethereum   blocks. If a future hardfork of Ethereum changes that format, the   logic in this contract may become incorrect and an updated version   would have to be deployed.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/testing/BlockhashStore.sol\":\"BlockhashStore\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/testing/BlockhashStore.sol\":{\"content\":\"pragma solidity ^0.6.0;\\n\\n/**\\n * @title BlockhashStore\\n * @notice This contract provides a way to access blockhashes older than\\n *   the 256 block limit imposed by the BLOCKHASH opcode.\\n *   You may assume that any blockhash stored by the contract is correct.\\n *   Note that the contract depends on the format of serialized Ethereum\\n *   blocks. If a future hardfork of Ethereum changes that format, the\\n *   logic in this contract may become incorrect and an updated version\\n *   would have to be deployed.\\n */\\ncontract BlockhashStore {\\n    mapping(uint256 => bytes32) internal s_blockhashes;\\n\\n    /**\\n     * @notice stores blockhash of a given block, assuming it is available through BLOCKHASH\\n     * @param n the number of the block whose blockhash should be stored\\n     */\\n    function store(uint256 n) public {\\n        bytes32 h = blockhash(n);\\n        require(h != 0x0, \\\"blockhash(n) failed\\\");\\n        s_blockhashes[n] = h;\\n    }\\n\\n    /**\\n     * @notice stores blockhash of the earliest block still available through BLOCKHASH.\\n     */\\n    function storeEarliest() external {\\n        store(block.number - 256);\\n    }\\n\\n    /**\\n     * @notice stores blockhash after verifying blockheader of child/subsequent block\\n     * @param n the number of the block whose blockhash should be stored\\n     * @param header the rlp-encoded blockheader of block n+1. We verify its correctness by checking\\n     *   that it hashes to a stored blockhash, and then extract parentHash to get the n-th blockhash.\\n     */\\n    function storeVerifyHeader(uint256 n, bytes memory header) public {\\n        require(\\n            keccak256(header) == s_blockhashes[n + 1],\\n            \\\"header has unknown blockhash\\\"\\n        );\\n\\n        // At this point, we know that header is the correct blockheader for block n+1.\\n\\n        // The header is an rlp-encoded list. The head item of that list is the 32-byte blockhash of the parent block.\\n        // Based on how rlp works, we know that blockheaders always have the following form:\\n        // 0xf9____a0PARENTHASH...\\n        //   ^ ^   ^\\n        //   | |   |\\n        //   | |   +--- PARENTHASH is 32 bytes. rlpenc(PARENTHASH) is 0xa || PARENTHASH.\\n        //   | |\\n        //   | +--- 2 bytes containing the sum of the lengths of the encoded list items\\n        //   |\\n        //   +--- 0xf9 because we have a list and (sum of lengths of encoded list items) fits exactly into two bytes.\\n        //\\n        // As a consequence, the PARENTHASH is always at offset 4 of the rlp-encoded block header.\\n\\n        bytes32 parentHash;\\n        assembly {\\n            parentHash := mload(add(header, 36)) // 36 = 32 byte offset for length prefix of ABI-encoded array\\n            //    +  4 byte offset of PARENTHASH (see above)\\n        }\\n\\n        s_blockhashes[n] = parentHash;\\n    }\\n\\n    /**\\n     * @notice gets a blockhash from the store. If no hash is known, this function reverts.\\n     * @param n the number of the block whose blockhash should be returned\\n     */\\n    function getBlockhash(uint256 n) external view returns (bytes32) {\\n        bytes32 h = s_blockhashes[n];\\n        require(h != 0x0, \\\"blockhash not found in store\\\");\\n        return h;\\n    }\\n}\\n\",\"keccak256\":\"0x1750c99cdf200b1a28e97b35cf73e8ec7f58e2882e9b014d3185e99a02f4aade\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506102e2806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c80636057361d1461005157806383b6d6b714610070578063e9413d3814610078578063fadff0e1146100a7575b600080fd5b61006e6004803603602081101561006757600080fd5b5035610154565b005b61006e6101b0565b6100956004803603602081101561008e57600080fd5b50356101bf565b60408051918252519081900360200190f35b61006e600480360360408110156100bd57600080fd5b813591908101906040810160208201356401000000008111156100df57600080fd5b8201836020820111156100f157600080fd5b8035906020019184600183028401116401000000008311171561011357600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610226945050505050565b80408061019e576040805162461bcd60e51b8152602060048201526013602482015272189b1bd8dada185cda0a1b8a4819985a5b1959606a1b604482015290519081900360640190fd5b60009182526020829052604090912055565b6101bd6101004303610154565b565b60008181526020819052604081205480610220576040805162461bcd60e51b815260206004820152601c60248201527f626c6f636b68617368206e6f7420666f756e6420696e2073746f726500000000604482015290519081900360640190fd5b92915050565b60008083600101815260200190815260200160002054818051906020012014610296576040805162461bcd60e51b815260206004820152601c60248201527f6865616465722068617320756e6b6e6f776e20626c6f636b6861736800000000604482015290519081900360640190fd5b602401516000918252602082905260409091205556fea2646970667358221220a0077f88494b7bfe9a9e38f2316ac54c7a09b510c2c626c3c156bef8b3ea1a5b64736f6c634300060c0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061004c5760003560e01c80636057361d1461005157806383b6d6b714610070578063e9413d3814610078578063fadff0e1146100a7575b600080fd5b61006e6004803603602081101561006757600080fd5b5035610154565b005b61006e6101b0565b6100956004803603602081101561008e57600080fd5b50356101bf565b60408051918252519081900360200190f35b61006e600480360360408110156100bd57600080fd5b813591908101906040810160208201356401000000008111156100df57600080fd5b8201836020820111156100f157600080fd5b8035906020019184600183028401116401000000008311171561011357600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610226945050505050565b80408061019e576040805162461bcd60e51b8152602060048201526013602482015272189b1bd8dada185cda0a1b8a4819985a5b1959606a1b604482015290519081900360640190fd5b60009182526020829052604090912055565b6101bd6101004303610154565b565b60008181526020819052604081205480610220576040805162461bcd60e51b815260206004820152601c60248201527f626c6f636b68617368206e6f7420666f756e6420696e2073746f726500000000604482015290519081900360640190fd5b92915050565b60008083600101815260200190815260200160002054818051906020012014610296576040805162461bcd60e51b815260206004820152601c60248201527f6865616465722068617320756e6b6e6f776e20626c6f636b6861736800000000604482015290519081900360640190fd5b602401516000918252602082905260409091205556fea2646970667358221220a0077f88494b7bfe9a9e38f2316ac54c7a09b510c2c626c3c156bef8b3ea1a5b64736f6c634300060c0033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "getBlockhash(uint256)": {
+        "params": {
+          "n": "the number of the block whose blockhash should be returned"
+        }
+      },
+      "store(uint256)": {
+        "params": {
+          "n": "the number of the block whose blockhash should be stored"
+        }
+      },
+      "storeVerifyHeader(uint256,bytes)": {
+        "params": {
+          "header": "the rlp-encoded blockheader of block n+1. We verify its correctness by checking   that it hashes to a stored blockhash, and then extract parentHash to get the n-th blockhash.",
+          "n": "the number of the block whose blockhash should be stored"
+        }
+      }
+    },
+    "title": "BlockhashStore",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "getBlockhash(uint256)": {
+        "notice": "gets a blockhash from the store. If no hash is known, this function reverts."
+      },
+      "store(uint256)": {
+        "notice": "stores blockhash of a given block, assuming it is available through BLOCKHASH"
+      },
+      "storeEarliest()": {
+        "notice": "stores blockhash of the earliest block still available through BLOCKHASH."
+      },
+      "storeVerifyHeader(uint256,bytes)": {
+        "notice": "stores blockhash after verifying blockheader of child/subsequent block"
+      }
+    },
+    "notice": "This contract provides a way to access blockhashes older than   the 256 block limit imposed by the BLOCKHASH opcode.   You may assume that any blockhash stored by the contract is correct.   Note that the contract depends on the format of serialized Ethereum   blocks. If a future hardfork of Ethereum changes that format, the   logic in this contract may become incorrect and an updated version   would have to be deployed.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 6,
+        "contract": "contracts/testing/BlockhashStore.sol:BlockhashStore",
+        "label": "s_blockhashes",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_uint256,t_bytes32)"
+      }
+    ],
+    "types": {
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_mapping(t_uint256,t_bytes32)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => bytes32)",
+        "numberOfBytes": "32",
+        "value": "t_bytes32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

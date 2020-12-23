@@ -86,7 +86,7 @@ describe("Vault + Router", () => {
     const user2 = this.users[5];
 
     // Add a new pool
-    await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
+    // await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     // Add liquiditiess.
     await this.RAMRouter.connect(user2.signer).addLiquidityYGYOnly(parseEther("100"), false);
@@ -105,12 +105,12 @@ describe("Vault + Router", () => {
     await this.RAMVault.connect(user2.signer).withdraw(0, user2LPBalance).should.be.fulfilled;
   });
 
-  it.only("RAMVault: YGY->RAM pool purchase boosts", async () => {
+  it("RAMVault: YGY->RAM pool purchase boosts", async () => {
     const user = this.users[4];
     const user2 = this.users[5];
 
     // Add a new pool
-    await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
+    // await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     // Auto-stake dude
     await this.RAMRouter.addLiquidityETHOnly(user.address, true, { value: parseEther("1") }).should.be.fulfilled;
@@ -211,7 +211,7 @@ describe("Vault + Router", () => {
 
     // Add a new pool
     const belowBalVault = (await this.RAM.balanceOf(this.RAMVault.address)) / 1e18;
-    await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
+    // await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, true, { value: parseEther("5") });
 
@@ -252,7 +252,7 @@ describe("Vault + Router", () => {
 
     // Add a new pool
     console.log(this.RAMVault.address);
-    await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
+    // await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     // Approve and deposit
     await this.RAMRouter.addLiquidityETHOnly(user2.address, true, { value: parseEther("2") });

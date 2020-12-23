@@ -20,6 +20,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
     using UserHelper for YGYStorageV1.UserInfo;
     using PoolHelper for YGYStorageV1.PoolInfo;
 
+    event NewEpoch(uint256);
     event RewardPaid(uint256 pid, address to);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -111,6 +112,7 @@ contract RAMVault is StorageState, OwnableUpgradeSafe {
         _storage.setCumulativeRewardsSinceStart();
         _storage.setRewardsInThisEpoch(0);
         _storage.setEpochCalculationStartBlock();
+        emit NewEpoch(_storage.epoch());
     }
 
     // --------------------------------------------

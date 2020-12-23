@@ -34,7 +34,6 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     uint256 public constant SCALE = 100;
     uint256 public constant SCALIFIER = MAX / SCALE;
     uint256 public constant OFFSET = 1;
-    uint256 public randomResult;
     uint256 public rngLinkFee;
     bytes32 internal keyHash;
 
@@ -377,7 +376,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
-    address public lotteryTriggerer;
+    address public lastLotteryTriggerer;
 
     /**
      * Requests randomness from a user-provided seed
@@ -390,7 +389,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             LINK.transferFrom(msg.sender, address(this), rngLinkFee),
             "Not enough LINK approved to contract"
         );
-        lotteryTriggerer = msg.sender;
+        lastLotteryTriggerer = msg.sender;
         return requestRandomness(keyHash, rngLinkFee, userProvidedSeed);
     }
 
@@ -401,15 +400,18 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
         internal
         override
     {
-        randomResult = rand(randomness);
+        uint256 randomResult = rand(randomness);
         lotteryResults[lotteryRoundCounter] = randomResult;
         lotteryRoundCounter = lotteryRoundCounter.add(1);
+        console.log("Settting result", lotteryRoundCounter, randomResult, _storage._NFTs(7));
         INFT LinkNFT = INFT(_storage._NFTs(7));
+        console.log("NFTT addr", address(LinkNFT));
         // Mint a LINK NFT to caller (only if they don't have one yet)
-        if (LinkNFT.balanceOf(lotteryTriggerer) == 0) {
-            _NFTFactory.mint(LinkNFT, lotteryTriggerer, randomResult);
+        if (_NFTFactory.balanceOf(LinkNFT, lastLotteryTriggerer) == 0) {
+        console.log("balance of link NFT", _NFTFactory.balanceOf(LinkNFT, lastLotteryTriggerer), lastLotteryTriggerer);
+            _NFTFactory.mint(LinkNFT, lastLotteryTriggerer, randomResult);
         }
-        lotteryTriggerer = address(0);
+        lastLotteryTriggerer = address(0);
     }
 
     function rand(uint256 randomness) private pure returns (uint256 result) {
@@ -428,12 +430,9 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     }
 
     function applyRandomNumberToTickets(address user) internal {
-        uint256 topStack = userTopTicketStack[user];
-        uint256 ticketCount = userTicketCount[user];
-
-        uint256 topStackMem = topStack;
-        uint256 ticketCountMem = ticketCount;
-        for (uint256 i = topStack; i < topStack.add(ticketCount); i++) {
+        uint256 topStackMem = userTopTicketStack[user];
+        uint256 ticketCountMem =  userTicketCount[user];
+        for (uint256 i = topStackMem; i < topStackMem.add(ticketCountMem); i++) {
             LotteryTicket memory ticket = userTickets[user][i];
             uint256 ticketRoundNumber = ticket.roundNumber;
 
@@ -443,39 +442,39 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             }
 
             uint256 roundResult = lotteryResults[ticketRoundNumber];
-            if (randomResult <= ticket.levelOneChance) {
+            if (roundResult <= ticket.levelOneChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(1)),
                     ticket.owner,
-                    randomResult
+                    roundResult
                 );
             }
-            if (randomResult <= ticket.levelTwoChance) {
+            if (roundResult <= ticket.levelTwoChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(2)),
                     ticket.owner,
-                    randomResult
+                    roundResult
                 );
             }
-            if (randomResult <= ticket.levelThreeChance) {
+            if (roundResult <= ticket.levelThreeChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(3)),
                     ticket.owner,
-                    randomResult
+                    roundResult
                 );
             }
-            if (randomResult <= ticket.levelFourChance) {
+            if (roundResult <= ticket.levelFourChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(4)),
                     ticket.owner,
-                    randomResult
+                    roundResult
                 );
             }
-            if (randomResult <= ticket.levelFiveChance) {
+            if (roundResult <= ticket.levelFiveChance) {
                 _NFTFactory.mint(
                     INFT(_storage._NFTs(5)),
                     ticket.owner,
-                    randomResult
+                    roundResult
                 );
             }
             // Increment top of user's ticket stack
@@ -519,7 +518,7 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
             _NFTFactory.balanceOf(robot, user) == 0 &&
             robot.totalSupply() < 50
         ) {
-            _NFTFactory.mint(robot, user, randomResult);
+            _NFTFactory.mint(robot, user, lotteryResults[lotteryRoundCounter]);
         }
     }
 

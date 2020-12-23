@@ -9,11 +9,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { parseEther } = ethers.utils;
 
-  const { deployer } = await getNamedAccounts();
+  const { deployer, devaddr, teamaddr, regeneratoraddr } = await getNamedAccounts();
   const [deployerSigner] = await ethers.getSigners();
 
   //@ts-ignore
-  const UNIFactory = await ethers.getContractAt("UniswapV2Factory", "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
+  const UNIFactory = await ethers.getContract("UniswapV2Factory");
   //@ts-ignore
   const YGY = await ethers.getContract("YGY");
   //@ts-ignore
@@ -23,7 +23,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //@ts-ignore
   const dXIOT = await ethers.getContract("dXIOT");
   //@ts-ignore
-  const ChainLink = await ethers.getContractAt("YGY", "0xa36085F69e2889c224210F603D836748e7dC0088", deployerSigner);
+  const ChainLink = await ethers.getContract("ChainLinkToken");
+
+  /** CHAINLINK FOR TESTING PURPOSES */
+  const BHASHSTORE = await deploy("BlockhashStore", {
+    from: deployer,
+    log: true,
+  });
+
+  separator();
+
+  const VRF = await deploy("VRFCoordinator", {
+    from: deployer,
+    log: true,
+    args: [ChainLink.address, BHASHSTORE.address],
+  });
 
   separator();
 
@@ -37,7 +51,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const YGYStorage = await ethers.getContractAt("YGYStorageV1", YGYSTORAGE.address, deployerSigner);
 
   // Init for access control
-  let tx = await YGYStorage.init();
+  let tx = await YGYStorage.init({ from: deployer });
   await tx.wait();
   console.log("YGYStorage initialized");
 
@@ -77,10 +91,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // Deployed instance using proxy
   const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
-  tx = await RAMVault.initialize(deployer, "0x7D60283E2Fad83bb81356F317009304082734D36", deployer, deployer);
+  tx = await RAMVault.initialize(deployer, regeneratoraddr, devaddr, teamaddr);
   await tx.wait();
   console.log("Initialized ram vault itself through proxy.");
-  console.log("DEV:", deployer, "TEAM", deployer, "regenerator", "0x7D60283E2Fad83bb81356F317009304082734D36");
+  console.log("DEV:", devaddr, "TEAM", teamaddr, "regenerator", regeneratoraddr);
   separator();
 
   // Deployed instance
@@ -91,7 +105,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   /** NFT DEPLOYMENTS  */
   console.log("Deploying NFT 1");
   tx = await NFTFactory.deployNFT(
-    "RAM1",
+    "RAM LEVEL 1",
     "RAM1",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     0,
@@ -107,7 +121,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 2");
   tx = await NFTFactory.deployNFT(
-    "RAM3",
+    "RAM LEVEL 2",
     "RAM3",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     1,
@@ -123,7 +137,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 3");
   tx = await NFTFactory.deployNFT(
-    "RAM3",
+    "RAM LEVEL 3",
     "RAM3",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     2,
@@ -139,7 +153,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 4");
   tx = await NFTFactory.deployNFT(
-    "RAM4",
+    "RAM LEVEL 4",
     "RAM4",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     3,
@@ -156,7 +170,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Deploying NFT 5");
   tx = await NFTFactory.deployNFT(
-    "RAM5",
+    "RAM LEVEL 5",
     "RAM5",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     4,
@@ -207,7 +221,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.table(nfts);
 
   // Robot and LINK nft share same props.
-  console.log("Setting NFT PROPS");
   tx = await YGYStorage.setNFTPropertiesForContract(nfts[0], [
     ["Something special", 11111, ethers.utils.formatBytes32String("Coming soon")],
     ["Even more special", 24224, ethers.utils.formatBytes32String("Coming soon")],
@@ -233,16 +246,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ["Even more special", 239329392, ethers.utils.formatBytes32String("Coming soon")],
   ]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("You are special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your are special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your special")]]);
   await tx.wait();
   console.log("Total NFTs deployed: ", nfts.length);
   separator();
 
   /** GENERATE YGY-WETH UNI PAIR   (TEST-ONLY) */
-  const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
-  const txres = await pairtx1.wait();
+  tx = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
+  const txres = await tx.wait();
 
   // Pair address is third arg for the PairCreated event.
   const YGYWETHAddr = txres.events[0].args[2];
@@ -268,11 +281,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeApprover initialized");
   tx = await FeeApprover.setPaused(false);
   await tx.wait();
+
   separator();
 
   // Set tokens to storage
   tx = await YGYStorage.setTokens(RAM.address, YGY.address, WETH.address, YGYRAMPair.address, YGYWETHPair.address, nfts, dXIOT.address);
   await tx.wait();
+
   /** ROUTER */
   const RAMROUTER = await deploy("RAMv1Router", {
     from: deployer,
@@ -282,54 +297,50 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       FEEAPPROVER.address,
       VAULTPROXY.address,
       NFTFACTORY.address,
-      "0x7D60283E2Fad83bb81356F317009304082734D36",
+      regeneratoraddr,
       YGYSTORAGE.address,
       ChainLink.address,
-      "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
+      VRF.address,
     ],
   });
+  tx = await dXIOT.connect(deployerSigner).approve(RAMROUTER.address, MAX_INT);
+  await tx.wait();
 
+  tx = await dXIOT.transfer(RAMROUTER.address, parseEther("2000"));
+  console.log("RAMRouter at:", RAMROUTER.address);
   separator();
 
-  console.log(
-    "Adding modifier rights for vault @ ",
-    VaultProxy.address,
-    " - router @ ",
-    RAMROUTER.address,
-    " - NFTFactory @ ",
-    NFTFACTORY.address
-  );
-  tx = await YGYStorage.setModifierContracts(VaultProxy.address, RAMROUTER.address, NFTFACTORY.address);
-  await tx.wait();
-  console.log("Modifiers added");
+  await YGYStorage.setModifierContracts(VaultProxy.address, RAMROUTER.address, NFTFACTORY.address);
   // Get router instnace
   const RAMRouter = await ethers.getContractAt("RAMv1Router", RAMROUTER.address, deployerSigner);
 
   // Initialize tokens
-  tx = await RAMRouter.setTokens();
-  await tx.wait();
+  await RAMRouter.setTokens();
   console.log("RAMRouter tokens set");
   separator();
 
   // Sets transferCheckerAddress() to deployer account
-  tx = await RAM.setShouldTransferChecker(FEEAPPROVER.address);
-  await tx.wait();
-  tx = await RAM.setFeeDistributor(VAULTPROXY.address);
-  await tx.wait();
+  await RAM.setShouldTransferChecker(FEEAPPROVER.address);
+  await RAM.setFeeDistributor(VAULTPROXY.address);
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
 
-  // SET MAINNETs
-  const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+  // * NOTE: Initial LP supply used with the uniswap router
+  await deploy("UniswapV2Router02", {
+    from: deployer,
+    log: true,
+    args: [UNIFactory.address, WETH.address],
+  });
 
-  console.log("Approving RAM & YGY for UNI Routter");
+  //@ts-ignore
+  const Router = await ethers.getContract("UniswapV2Router02");
+
   tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
   tx = await YGY.approve(Router.address, parseEther("1000000000000000000"));
   await tx.wait();
 
-  console.log("Adding YGY RAM Liquidity");
-  tx = await Router.addLiquidity(
+  const initialSupplyTx = await Router.addLiquidity(
     YGY.address,
     RAM.address,
     parseEther("10000"),
@@ -339,32 +350,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     deployer,
     Date.now() + 100000000 / 1000
   );
-  await tx.wait();
+  await initialSupplyTx.wait();
 
-  separator();
-
-  console.log("Approving weth");
-  tx = await WETH.connect(deployerSigner).approve(Router.address, MAX_INT);
-  await tx.wait();
-  tx = await WETH.connect(deployerSigner).approve(RAMRouter.address, MAX_INT);
+  tx = await WETH.approve(Router.address, MAX_INT);
   await tx.wait();
 
   console.log("Adding liquidity to YGYWETH");
   const weth = await ethers.getContractAt("WETH9", WETH.address);
-  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("5") });
+  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("1") });
   await tx.wait();
-
   tx = await Router.addLiquidity(
     YGY.address,
     WETH.address,
-    parseEther("5000"),
-    parseEther("5"),
-    parseEther("5000"),
-    parseEther("5"),
+    parseEther("10"),
+    parseEther("1"),
+    parseEther("10"),
+    parseEther("1"),
     deployer,
-    Date.now() + 1000000 / 1000
+    Date.now() + 100000000 / 1000
   );
-
   await tx.wait();
 
   tx = await YGYRAMPair.sync();
@@ -378,12 +382,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await YGY.approve(RAMRouter.address, MAX_INT);
   await tx.wait();
+
   tx = await dXIOT.approve(RAMRouter.address, MAX_INT);
   await tx.wait();
 
-  console.log("transferring DXIOT to router");
-  tx = await dXIOT.transfer(RAMRouter.address, parseEther("20000"));
-  await tx.wait();
   // // Bond NFT factory and deploy NFTs using RAM router
   tx = await NFTFactory.bondContract(RAMRouter.address);
   await tx.wait();
@@ -401,29 +403,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Governance set in RAMRouter at: ", GOVERNANCE.address);
   separator();
 
+  console.log("Adding a pool for", YGYRAMPair.address);
+  tx = await RAMVault.addPool(100, YGYRAMPair.address, true);
+  await tx.wait();
+
   const all = await deployments.all();
   console.log("Deployment addresses");
   for (const deployment in all) {
     console.log(deployment, all[deployment].address);
   }
   separator();
-
-  console.log("trying to verify..");
-  console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
-  await hre.run("verify", {
-    network: hre.network.name,
-    address: RAMROUTER.address,
-    constructorArguments: [
-      UNIFactory.address,
-      FEEAPPROVER.address,
-      VAULTPROXY.address,
-      NFTFACTORY.address,
-      "0x7D60283E2Fad83bb81356F317009304082734D36",
-      YGYSTORAGE.address,
-      ChainLink.address,
-      "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
-    ],
-  });
 };
 
 export default func;

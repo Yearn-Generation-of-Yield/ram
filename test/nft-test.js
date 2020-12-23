@@ -6,6 +6,7 @@ chai.use(chaiAsPromised);
 chai.should();
 const { setTestVars } = require("../scripts/setTestVars");
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
+
 const { parseEther, formatEther } = ethers.utils;
 const fetch = require("node-fetch");
 
@@ -82,6 +83,25 @@ describe("NFT", function () {
     await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(123456).should.be.fulfilled;
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
     const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
+    balance.should.equal(1);
+  });
+
+  it.only("mints a link nft to a RNG supplier, can use it and mints a new one", async () => {
+    const NFT = await deployments.getArtifact("NFT");
+    await this.ChainLink.connect(this.users[7].signer).approve(this.RAMRouter.address, MAX_INT);
+    await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(123456).should.be.fulfilled;
+    const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
+    const LINKNFTInstance = await ethers.getContractAt(NFT.abi, LINKNFTAddress, this.users[7].address);
+    let balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
+    balance.should.equal(1);
+    await LINKNFTInstance.connect(this.users[7].signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
+    await this.NFTFactory.connect(this.users[7].signer).useNFT(LINKNFTAddress, 0, 0).should.be.fulfilled;
+    balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
+    balance.should.equal(0);
+    await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(43343433).should.be.fulfilled;
+    balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
+    const supply = await LINKNFTInstance.totalSupply();
+    console.log(Number(supply));
     balance.should.equal(1);
   });
 
@@ -208,9 +228,6 @@ describe("NFT", function () {
   });
 
   it("cant trade a link card but can use it", async () => {
-    // Add a new pool
-    await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
-
     await this.RAMRouter.selfRequestRandomNumber(123456).should.be.fulfilled;
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
     const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.deployer));
@@ -288,7 +305,8 @@ describe("NFT", function () {
     hasRobot.should.be.equal(true);
 
     // Deposit to win
-    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("40") }).should.be.fulfilled;
+    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("40") }).should.be
+      .fulfilled;
 
     // liqContributed = (await this.Storage.liquidityContributedEthValue(user.address)) / 1e18;
     // liqContributed.should.equal(50);
@@ -346,14 +364,14 @@ describe("NFT", function () {
     // User two has no more tickets and cannot claim
     userTwoTicketCount = Number(await this.RAMRouter.userTicketCount(userTwo.address));
     userTwoTicketCount.should.equal(0);
-    await expectRevert((this.RAMRouter.connect(userTwo.signer).claimTickets()), 'No tickets to claim');
+    await expectRevert(this.RAMRouter.connect(userTwo.signer).claimTickets(), "No tickets to claim");
 
     lotteryRoundCounter = Number(await this.RAMRouter.lotteryRoundCounter());
     lotteryRoundCounter.should.equal(2);
 
     // User two adds another ticket (going from 10 -> 20 ETH)
     await this.RAMRouter.connect(userTwo.signer).addLiquidityETHOnly(userTwo.address, false, { value: web3.utils.toWei("10") }).should.be
-    .fulfilled;
+      .fulfilled;
     userTwoTicketCount = Number(await this.RAMRouter.userTicketCount(userTwo.address));
     userTwoTicketCount.should.equal(1);
 
@@ -374,7 +392,7 @@ describe("NFT", function () {
 
     // User two adds another ticket (going from 20 -> 30 ETH)
     await this.RAMRouter.connect(userTwo.signer).addLiquidityETHOnly(userTwo.address, false, { value: web3.utils.toWei("10") }).should.be
-    .fulfilled;
+      .fulfilled;
     userTwoTicketCount = Number(await this.RAMRouter.userTicketCount(userTwo.address));
     userTwoTicketCount.should.equal(2);
 
@@ -389,7 +407,7 @@ describe("NFT", function () {
     lotteryRoundCounter = Number(await this.RAMRouter.lotteryRoundCounter());
     lotteryRoundCounter.should.equal(4);
 
-      // User two claims tickets again, should successfully claim the last ticket
+    // User two claims tickets again, should successfully claim the last ticket
     await this.RAMRouter.connect(userTwo.signer).claimTickets();
     userTwoTicketCount = Number(await this.RAMRouter.userTicketCount(userTwo.address));
     userTwoTicketCount.should.equal(0);
