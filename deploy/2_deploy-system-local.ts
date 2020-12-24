@@ -83,21 +83,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   separator();
 
+  // Deploy the Vault proxy.
   const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address, deployerSigner);
   tx = await VaultProxy.setup(RAMVAULT.address, YGYStorage.address);
   await tx.wait();
   console.log("Proxy initialized at", VaultProxy.address, "with implementation of vault at:", RAMVAULT.address);
   separator();
 
-  // Deployed instance using proxy
+  // Deploy RAM VAULT instance using the Proxy.
   const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
-  tx = await RAMVault.initialize(deployer, regeneratoraddr, devaddr, teamaddr);
+  tx = await RAMVault.initialize(deployer, regeneratoraddr, devaddr, teamaddr, NFTFACTORY.address);
   await tx.wait();
   console.log("Initialized ram vault itself through proxy.");
-  console.log("DEV:", devaddr, "TEAM", teamaddr, "regenerator", regeneratoraddr);
+  console.log("DEV:", devaddr, "TEAM", teamaddr, "regenerator", regeneratoraddr, "NFTFactory", NFTFACTORY.address);
   separator();
 
-  // Deployed instance
+  // Deployed instance of NFTFactory.
   const NFTFactory = await ethers.getContractAt("NFTFactory", NFTFACTORY.address, deployerSigner);
 
   const nfts = [];

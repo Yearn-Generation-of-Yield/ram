@@ -12,7 +12,7 @@ async function main() {
   //@ts-ignore
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
-  const RAMVault = await ethers.getContractAt("RAMVault", "0x98AA54AcA23d9fd3164798a6056E0371a56Db7A7", deployerSigner);
+  const RAMVault = await ethers.getContractAt("RAMVault", "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82", deployerSigner);
   let tx = await RAMVault.massUpdatePools();
   await tx.wait();
   console.log("Mass updated");

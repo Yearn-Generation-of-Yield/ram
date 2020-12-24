@@ -275,19 +275,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await YGYStorage.setTokens(RAM.address, YGY.address, WETH.address, YGYRAMPair.address, YGYWETHPair.address, nfts, dXIOT.address);
   await tx.wait();
   /** ROUTER */
+  const ROUTERConstructor = [
+    UNIFactory.address,
+    FEEAPPROVER.address,
+    VAULTPROXY.address,
+    NFTFACTORY.address,
+    "0x7D60283E2Fad83bb81356F317009304082734D36",
+    YGYSTORAGE.address,
+    ChainLink.address,
+    "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
+  ];
   const RAMROUTER = await deploy("RAMv1Router", {
     from: deployer,
     log: true,
-    args: [
-      UNIFactory.address,
-      FEEAPPROVER.address,
-      VAULTPROXY.address,
-      NFTFACTORY.address,
-      "0x7D60283E2Fad83bb81356F317009304082734D36",
-      YGYSTORAGE.address,
-      ChainLink.address,
-      "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
-    ],
+    args: ROUTERConstructor,
   });
 
   separator();
@@ -382,18 +383,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await dXIOT.approve(RAMRouter.address, MAX_INT);
   await tx.wait();
 
-  console.log("transferring DXIOT to router");
-  tx = await dXIOT.transfer(RAMRouter.address, parseEther("20000"));
-  await tx.wait();
+  // console.log("transferring DXIOT to router");
+  // tx = await dXIOT.transfer(RAMRouter.address, parseEther("20000"));
+  // await tx.wait();
   // // Bond NFT factory and deploy NFTs using RAM router
   tx = await NFTFactory.bondContract(RAMRouter.address);
   await tx.wait();
 
-  // // Deploy governance contract and set on router
+  // Deploy governance contract and set on router
+  const GOVERNANCEArgs = [YGY.address, RAMRouter.address];
   const GOVERNANCE = await deploy("Governance", {
     from: deployer,
     log: true,
-    args: [YGY.address, RAMRouter.address],
+    args: GOVERNANCEArgs,
   });
   separator();
 
@@ -402,29 +404,33 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Governance set in RAMRouter at: ", GOVERNANCE.address);
   separator();
 
+  console.log("Adding a pool for", YGYRAMPair.address);
+  tx = await RAMVault.addPool(100, YGYRAMPair.address, true);
+  await tx.wait();
+
   const all = await deployments.all();
   console.log("Deployment addresses");
   for (const deployment in all) {
     console.log(deployment, all[deployment].address);
   }
   separator();
+  if (hre.network.name !== "hardhat") {
+    console.log("trying to verify..");
+    console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
+    await hre.run("verify", {
+      network: hre.network.name,
+      address: RAMROUTER.address,
+      constructorArguments: ROUTERConstructor,
+    });
 
-  console.log("trying to verify..");
-  console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
-  await hre.run("verify", {
-    network: hre.network.name,
-    address: RAMROUTER.address,
-    constructorArguments: [
-      UNIFactory.address,
-      FEEAPPROVER.address,
-      VAULTPROXY.address,
-      NFTFACTORY.address,
-      "0x7D60283E2Fad83bb81356F317009304082734D36",
-      YGYSTORAGE.address,
-      ChainLink.address,
-      "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9", // VRF KOVAN
-    ],
-  });
+    console.log("trying to verify  governance..");
+    console.log("Governance at:", GOVERNANCE.address, "verifying...");
+    await hre.run("verify", {
+      network: hre.network.name,
+      address: GOVERNANCE.address,
+      constructorArguments: GOVERNANCEArgs,
+    });
+  }
 };
 
 export default func;

@@ -86,116 +86,161 @@ describe("NFT", function () {
     balance.should.equal(1);
   });
 
-  it.only("mints a link nft to a RNG supplier, can use it and mints a new one", async () => {
+  it("mints a link nft to a RNG supplier, can use it and mints a new one", async () => {
     const NFT = await deployments.getArtifact("NFT");
+    // Do not allow claiming if link not provided
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.not.be.fulfilled;
+
+    // Provide LiNK
     await this.ChainLink.connect(this.users[7].signer).approve(this.RAMRouter.address, MAX_INT);
     await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(123456).should.be.fulfilled;
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.be.fulfilled;
+
+    // Do not allow claiming if link not provided
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.not.be.fulfilled;
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
     const LINKNFTInstance = await ethers.getContractAt(NFT.abi, LINKNFTAddress, this.users[7].address);
     let balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
     balance.should.equal(1);
+
+    // Use the LINK NFT
     await LINKNFTInstance.connect(this.users[7].signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
     await this.NFTFactory.connect(this.users[7].signer).useNFT(LINKNFTAddress, 0, 0).should.be.fulfilled;
     balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
     balance.should.equal(0);
+
+    // Claim a new one
     await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(43343433).should.be.fulfilled;
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.be.fulfilled;
     balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
     const supply = await LINKNFTInstance.totalSupply();
     console.log(Number(supply));
+    balance.should.equal(1);
+
+    // Should not be able to use it tho
+    await LINKNFTInstance.connect(this.users[7].signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
+    await this.NFTFactory.connect(this.users[7].signer).useNFT(LINKNFTAddress, 1, 0).should.not.be.fulfilled;
+    balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
     balance.should.equal(1);
   });
 
   // TODO: time.advanceBlockTo(6000) takes too long in the test suite
 
-  // it("gives a boost from link and robot NFT and reset on new epoch", async () => {
-  //   const user1 = this.users[7];
-  //   const user2 = this.users[6];
+  it("gives a boost from link and robot NFT and reset on new epoch", async () => {
+    const user1 = this.users[7];
+    const user2 = this.users[6];
 
-  //   // Add a new pool
-  //   await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
+    await this.YGY.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
+    // Auto-stake dude
+    await this.RAMRouter.connect(user1.signer).addLiquidityYGYOnly(parseEther("100"), true).should.be.fulfilled;
 
-  //   await this.YGY.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
-  //   // Auto-stake dude
-  //   await this.RAMRouter.connect(user1.signer).addLiquidityYGYOnly(parseEther("100"), true).should.be.fulfilled;
+    // Get a LINK NFT by providing.
+    await this.ChainLink.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
+    await this.RAMRouter.connect(user1.signer).selfRequestRandomNumber(123456).should.be.fulfilled;
+    await this.RAMRouter.connect(user1.signer).claimLink().should.be.fulfilled;
+    const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
+    const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, user1.address));
 
-  //   await this.ChainLink.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
-  //   await this.RAMRouter.connect(user1.signer).selfRequestRandomNumber(123456).should.be.fulfilled;
-  //   const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
-  //   const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, user1.address));
+    balance.should.equal(1);
 
-  //   balance.should.equal(1);
+    // Deposit user 2 for robot.
+    await this.dXIOT.transfer(user2.address, parseEther("20"));
+    for (let i = 0; i < 21; i++) {
+      let tx = await this.RAMRouter.connect(user2.signer).addLiquidityETHOnly(user2.address, true, { value: web3.utils.toWei("2") });
+      await tx.wait();
+    }
 
-  //   await this.dXIOT.transfer(user2.address, parseEther("20"));
-  //   for (let i = 0; i < 21; i++) {
-  //     let tx = await this.RAMRouter.connect(user2.signer).addLiquidityETHOnly(user2.address, true, { value: web3.utils.toWei("2") });
-  //     await tx.wait();
-  //   }
-  //   const ROBOTNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.ROBOT);
-  //   let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user2.address, 0).should.be.fulfilled;
-  //   hasRobot.should.be.equal(true);
+    // Claim the ROBOT for user 2
+    await this.RAMRouter.connect(user2.signer).claimRobot().should.be.fulfilled;
+    const ROBOTNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.ROBOT);
+    let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user2.address, 0).should.be.fulfilled;
+    hasRobot.should.be.equal(true);
 
-  //   const userBefore1 = await this.Storage.userInfo(0, user1.address);
-  //   const userBefore2 = await this.Storage.userInfo(0, user2.address);
+    const userBefore1 = await this.Storage.userInfo(0, user1.address);
+    const userBefore2 = await this.Storage.userInfo(0, user2.address);
 
-  //   (userBefore1.amount / 1e18).should.be.greaterThan(0);
-  //   userBefore1.boostAmount.should.equal(0);
-  //   (userBefore2.amount / 1e18).should.be.greaterThan(0);
-  //   userBefore2.boostAmount.should.equal(0);
+    (userBefore1.amount / 1e18).should.be.greaterThan(0);
+    userBefore1.boostAmount.should.equal(0);
+    (userBefore2.amount / 1e18).should.be.greaterThan(0);
+    userBefore2.boostAmount.should.equal(0);
 
-  //   const NFT = await deployments.getArtifact("NFT");
-  //   const LINKNFTInstance = await ethers.getContractAt(NFT.abi, LINKNFTAddress, user1.signer);
-  //   await LINKNFTInstance.transferFrom(user1.address, this.user3, 0).should.not.be.fulfilled;
-  //   await LINKNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
-  //   await this.NFTFactory.connect(user1.signer).useNFT(LINKNFTAddress, 0, 0).should.be.fulfilled;
+    const NFT = await deployments.getArtifact("NFT");
+    const LINKNFTInstance = await ethers.getContractAt(NFT.abi, LINKNFTAddress, user1.signer);
+    await LINKNFTInstance.transferFrom(user1.address, this.user3, 0).should.not.be.fulfilled;
 
-  //   const ROBOTNFTInstance = await ethers.getContractAt(NFT.abi, ROBOTNFTAddress, user2.signer);
-  //   await ROBOTNFTInstance.connect(user2.signer).transferFrom(user2.address, this.user3, 0).should.not.be.fulfilled;
-  //   await ROBOTNFTInstance.connect(user2.signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
-  //   await this.NFTFactory.connect(user2.signer).useNFT(ROBOTNFTAddress, 0, 0).should.be.fulfilled;
+    // Use LINK NFT for user 1
+    await LINKNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
+    await this.NFTFactory.connect(user1.signer).useNFT(LINKNFTAddress, 0, 0).should.be.fulfilled;
 
-  //   const userAfter1 = await this.Storage.userInfo(0, user1.address);
-  //   const userAfter2 = await this.Storage.userInfo(0, user2.address);
+    // Use ROBOT NFT for user 2
+    const ROBOTNFTInstance = await ethers.getContractAt(NFT.abi, ROBOTNFTAddress, user2.signer);
+    await ROBOTNFTInstance.connect(user2.signer).transferFrom(user2.address, this.user3, 0).should.not.be.fulfilled;
+    await ROBOTNFTInstance.connect(user2.signer).approve(this.NFTFactory.address, 0).should.be.fulfilled;
+    await this.NFTFactory.connect(user2.signer).useNFT(ROBOTNFTAddress, 0, 0).should.be.fulfilled;
 
-  //   (userAfter1.boostAmount / 1e18).should.be.greaterThan(0);
-  //   (userAfter2.boostAmount / 1e18).should.be.greaterThan(0);
-  //   const NFTBoost = await this.Storage.getNFTBoost(user1.address);
-  //   const NFTBoost2 = await this.Storage.getNFTBoost(user2.address);
+    const userAfter1 = await this.Storage.userInfo(0, user1.address);
+    const userAfter2 = await this.Storage.userInfo(0, user2.address);
 
-  //   Number(NFTBoost).should.equal(10);
-  //   Number(NFTBoost2).should.equal(10);
+    // Users should have boost
+    (userAfter1.boostAmount / 1e18).should.be.greaterThan(0);
+    (userAfter2.boostAmount / 1e18).should.be.greaterThan(0);
+    const NFTBoost = await this.Storage.getNFTBoost(user1.address);
+    const NFTBoost2 = await this.Storage.getNFTBoost(user2.address);
 
-  //   const block = await time.latestBlock();
-  //   await time.advanceBlockTo(block + 6000);
-  //   await this.RAMVault.startNewEpoch();
+    // Which equal 10%
+    Number(NFTBoost).should.equal(10);
+    Number(NFTBoost2).should.equal(10);
 
-  //   const NFTBoostAfter = await this.Storage.getNFTBoost(user1.address);
-  //   const NFTBoostAfter2 = await this.Storage.getNFTBoost(user2.address);
+    const block = await time.latestBlock();
+    // await time.advanceBlockTo(block + 6000);
 
-  //   NFTBoostAfter.should.be.equal(0);
-  //   NFTBoostAfter2.should.be.equal(0);
+    // Null the boosts by starting a new epoch
+    await this.RAMVault.startNewEpoch();
 
-  //   await this.RAMRouter.connect(user1.signer).selfRequestRandomNumber(12443456).should.be.fulfilled;
-  //   await LINKNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
-  //   await this.NFTFactory.connect(user1.signer).useNFT(LINKNFTAddress, 1, 0).should.be.fulfilled;
+    const NFTBoostAfter = await this.Storage.getNFTBoost(user1.address);
+    const NFTBoostAfter2 = await this.Storage.getNFTBoost(user2.address);
 
-  //   const NFTBoostAfterSecond = await this.Storage.getNFTBoost(user1.address);
-  //   Number(NFTBoostAfterSecond).should.equal(10);
+    // No more boosts
+    NFTBoostAfter.should.be.equal(0);
+    NFTBoostAfter2.should.be.equal(0);
 
-  //   await this.dXIOT.transfer(user1.address, parseEther("20"));
-  //   for (let i = 0; i < 21; i++) {
-  //     let tx = await this.RAMRouter.connect(user1.signer).addLiquidityETHOnly(user1.address, true, { value: web3.utils.toWei("2") });
-  //     await tx.wait();
-  //   }
-  //   await ROBOTNFTInstance.connect(user1.signer).transferFrom(user1.address, this.user3, 0).should.not.be.fulfilled;
-  //   await ROBOTNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
-  //   await this.NFTFactory.connect(user1.signer).useNFT(ROBOTNFTAddress, 1, 0).should.be.fulfilled;
-  //   const NFTBoostAfterThird = await this.Storage.getNFTBoost(user1.address);
-  //   await this.RAMRouter.connect(user1.signer).addLiquidityETHOnly(user1.address, true, { value: web3.utils.toWei("2") });
-  //   const userInfo = await this.Storage.userInfo(0, user1.address);
-  //   Number(NFTBoostAfterThird).should.equal(20);
-  //   console.log(Number(userInfo.boostAmount), Number(userInfo.amount));
-  //   ((userInfo.amount / 1e18) * 0.2).should.be.closeTo(userInfo.boostAmount / 1e18, 0.01);
-  // });
+    // Get new LINK NFT
+    await this.RAMRouter.connect(user1.signer).selfRequestRandomNumber(12443456).should.be.fulfilled;
+    await this.RAMRouter.connect(user1.signer).claimLink().should.be.fulfilled;
+
+    // Just use it
+    await LINKNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
+    await this.NFTFactory.connect(user1.signer).useNFT(LINKNFTAddress, 1, 0).should.be.fulfilled;
+
+    // Check boost
+    const NFTBoostAfterSecond = await this.Storage.getNFTBoost(user1.address);
+    Number(NFTBoostAfterSecond).should.equal(10);
+
+    // Deposit user 1 for robot.
+    await this.dXIOT.transfer(user1.address, parseEther("20"));
+    for (let i = 0; i < 21; i++) {
+      let tx = await this.RAMRouter.connect(user1.signer).addLiquidityETHOnly(user1.address, true, { value: web3.utils.toWei("2") });
+      await tx.wait();
+    }
+
+    // Claim NFT and check that it cannot be transferred
+    await this.RAMRouter.connect(user1.signer).claimRobot().should.be.fulfilled;
+    await ROBOTNFTInstance.connect(user1.signer).transferFrom(user1.address, this.user3, 1).should.not.be.fulfilled;
+
+    // Usage should be fine
+    await ROBOTNFTInstance.connect(user1.signer).approve(this.NFTFactory.address, 1).should.be.fulfilled;
+    await this.NFTFactory.connect(user1.signer).useNFT(ROBOTNFTAddress, 1, 0).should.be.fulfilled;
+
+    // Check that boost is 20%
+    const NFTBoostAfterThird = await this.Storage.getNFTBoost(user1.address);
+    await this.RAMRouter.connect(user1.signer).addLiquidityETHOnly(user1.address, true, { value: web3.utils.toWei("2") });
+    const userInfo = await this.Storage.userInfo(0, user1.address);
+    Number(NFTBoostAfterThird).should.equal(20);
+
+    // Double check
+    console.log(Number(userInfo.boostAmount), Number(userInfo.amount));
+    ((userInfo.amount / 1e18) * 0.2).should.be.closeTo(userInfo.boostAmount / 1e18, 0.01);
+  });
 
   it("has metadata and random properties on nfts", async () => {
     // Get artifacts
