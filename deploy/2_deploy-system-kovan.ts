@@ -77,11 +77,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // Deployed instance using proxy
   const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
-  tx = await RAMVault.initialize(deployer, "0x7D60283E2Fad83bb81356F317009304082734D36", deployer, deployer);
+
+  // * SET FOR MAINNET
+  let teamAddr = deployer;
+  let devAddr = deployer;
+  let regeneratorAddr = "0x7D60283E2Fad83bb81356F317009304082734D36";
+
+  tx = await RAMVault.initialize(deployer, regeneratorAddr, devAddr, teamAddr, NFTFACTORY.address);
   await tx.wait();
   //
   console.log("Initialized ram vault itself through proxy.");
-  console.log("DEV:", deployer, "TEAM", deployer, "regenerator", "0x7D60283E2Fad83bb81356F317009304082734D36");
+  console.log("DEV:", devAddr, "TEAM", teamAddr, "regenerator", regeneratorAddr);
   separator();
 
   // Deployed instance
@@ -99,8 +105,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     2,
     deployer,
     true,
-    false,
-    MAX_INT,
+    true,
+    1000,
     VAULTPROXY.address
   );
   let receipt = await tx.wait();
@@ -115,8 +121,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     2,
     deployer,
     true,
-    false,
-    MAX_INT,
+    true,
+    1000,
     VAULTPROXY.address
   );
   receipt = await tx.wait();
@@ -131,8 +137,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     2,
     deployer,
     true,
-    false,
-    MAX_INT,
+    true,
+    500,
     VAULTPROXY.address
   );
   receipt = await tx.wait();
@@ -144,11 +150,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "RAM4",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     3,
-    2,
+    1,
     deployer,
     true,
-    false,
-    MAX_INT,
+    true,
+    200,
     VAULTPROXY.address
   );
 
@@ -161,11 +167,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "RAM5",
     "https://run.mocky.io/v3/3da52de1-1e4f-4e7e-8ae7-b68be4278835",
     4,
-    2,
+    1,
     deployer,
     true,
-    false,
-    MAX_INT,
+    true,
+    200,
     VAULTPROXY.address
   );
 
@@ -209,34 +215,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // Robot and LINK nft share same props.
   console.log("Setting NFT PROPS");
+
   tx = await YGYStorage.setNFTPropertiesForContract(nfts[0], [
-    ["Something special", 11111, ethers.utils.formatBytes32String("Coming soon")],
-    ["Even more special", 24224, ethers.utils.formatBytes32String("Coming soon")],
+    ["boost-pool", 5, ethers.utils.formatBytes32String("Speed Up")],
+    ["boost", 250000, ethers.utils.formatBytes32String("Super Sized Horns")],
   ]);
   await tx.wait();
   tx = await YGYStorage.setNFTPropertiesForContract(nfts[1], [
-    ["Something special", 17244, ethers.utils.formatBytes32String("Coming soon")],
-    ["Even more special", 194294, ethers.utils.formatBytes32String("Coming soon")],
+    ["boost", 250000, ethers.utils.formatBytes32String("Headbutt")],
+    ["steal-non-il", 10, ethers.utils.formatBytes32String("Concussive shot")],
   ]);
   await tx.wait();
   tx = await YGYStorage.setNFTPropertiesForContract(nfts[2], [
-    ["Something special", 14233, ethers.utils.formatBytes32String("Coming soon")],
-    ["Even more special", 23123139, ethers.utils.formatBytes32String("Coming soon")],
+    ["boost", 500000, ethers.utils.formatBytes32String("Extraly Wooly")],
+    ["steal-non-il", 10, ethers.utils.formatBytes32String("Feinting Sheep")],
   ]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[3], [
-    ["Something special", 41411, ethers.utils.formatBytes32String("Coming soon")],
-    ["Even more special", 23132392, ethers.utils.formatBytes32String("Coming soon")],
-  ]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[3], [["boost", 1000000, ethers.utils.formatBytes32String("Ram")]]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[4], [
-    ["Something special", 50000, ethers.utils.formatBytes32String("Coming soon")],
-    ["Even more special", 239329392, ethers.utils.formatBytes32String("Coming soon")],
-  ]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[4], [["extend-active-nft", 1, ethers.utils.formatBytes32String("Locked Horns")]]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("You are special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[5], [["boost", 10, ethers.utils.formatBytes32String("ROBOT")]]);
   await tx.wait();
-  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("Your are special")]]);
+  tx = await YGYStorage.setNFTPropertiesForContract(nfts[6], [["boost", 10, ethers.utils.formatBytes32String("LINK")]]);
   await tx.wait();
   console.log("Total NFTs deployed: ", nfts.length);
   separator();

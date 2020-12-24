@@ -70,9 +70,7 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
     require(hasRole(SYSTEM_ROLE, _msgSender()), "Not allowed");
 
     // Mint the token, get the unique id.
-    // OLD HANGUP CALL
     uint256 tokenId = super.mint(to);
-    console.log(propertyChoices, to, _msgSender(), totalSupply());
     // Get a random index for property selection
     uint256 propIndex;
     if (propertyChoices > 1) {
@@ -81,16 +79,18 @@ contract NFT is ERC721, AccessControlUpgradeSafe {
     // Random properties got
     (string memory pType, uint256 pValue, bytes32 extra) = _storage.getNFTProperty(contractId.add(1), propIndex);
     properties[tokenId].pType = pType;
-    console.log("setting prop value");
-    // NOW HANGS HERE:'(
     properties[tokenId].pValue = pValue;
-    console.log("prop value set");
     properties[tokenId].extra = extra;
     return tokenId;
   }
 
   function getTokenProperty(uint256 _tokenId) public view returns (YGYStorageV1.NFTProperty memory) {
     return properties[_tokenId];
+  }
+
+  function setTokenURI(string memory uri) external {
+    require(hasRole(SYSTEM_ROLE, _msgSender()), "Bad caller!");
+    _tokenURI = uri;
   }
 
   function transferFrom(

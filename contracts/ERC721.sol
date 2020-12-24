@@ -340,7 +340,6 @@ contract ERC721 is ContextUpgradeSafe, ERC165UpgradeSafe, IERC721, IERC721Metada
    */
   function mint(address to) internal returns (uint256 tokenId) {
     uint256 currentId = _tokenIdTracker.current();
-    console.log("NFT mint() tokenId, to:", currentId, to);
     _mint(to, currentId);
     _tokenIdTracker.increment();
     return currentId;
@@ -353,8 +352,6 @@ contract ERC721 is ContextUpgradeSafe, ERC165UpgradeSafe, IERC721, IERC721Metada
     _beforeTokenTransfer(address(0), to, tokenId);
     _holderTokens[to].add(tokenId);
 
-    console.log("ERC721 _mint()", to, tokenId);
-    // hangs up here :(
     _tokenOwners.set(tokenId, to);
     emit Transfer(address(0), to, tokenId);
   }
