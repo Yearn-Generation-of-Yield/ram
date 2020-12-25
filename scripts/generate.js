@@ -11,16 +11,16 @@ async function main() {
 
   //@ts-ignore
   const deployerSigner = await hre.ethers.getSigner(deployer);
-  const RAM = await ethers.getContract("YGY");
+  const RAM = await ethers.getContract("RAM");
 
   console.log("doing 20 transfers");
   for (let i = 0; i < 20; i++) {
     console.log("transfer", i + 1);
-    let tx = await RAM.transfer(deployer, ethers.utils.parseEther("1000"));
+    let tx = await RAM.transfer(deployer, ethers.utils.parseEther("25"));
     await tx.wait();
   }
 
-  const RAMVault = await ethers.getContractAt("RAMVault", "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82");
+  const RAMVault = await ethers.getContractAt("RAMVault", "0x30Fc2B26c118E9CFFAEEf579620EF08c55Dbda85");
   console.log("mass update");
   tx = await RAMVault.massUpdatePools();
   await tx.wait();
