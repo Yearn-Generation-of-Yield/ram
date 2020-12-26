@@ -325,48 +325,48 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // SET MAINNETs
   const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
 
-  console.log("Approving RAM & YGY for UNI Routter");
-  tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
-  await tx.wait();
-  tx = await YGY.approve(Router.address, parseEther("1000000000000000000"));
-  await tx.wait();
+  // console.log("Approving RAM & YGY for UNI Routter");
+  // tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
+  // await tx.wait();
+  // tx = await YGY.approve(Router.address, parseEther("1000000000000000000"));
+  // await tx.wait();
 
-  console.log("Adding YGY RAM Liquidity");
-  tx = await Router.addLiquidity(
-    YGY.address,
-    RAM.address,
-    parseEther("10000"),
-    parseEther("10000"),
-    parseEther("10000"),
-    parseEther("10000"),
-    deployer,
-    Date.now() + 100000000 / 1000
-  );
-  await tx.wait();
+  // console.log("Adding YGY RAM Liquidity");
+  // tx = await Router.addLiquidity(
+  //   YGY.address,
+  //   RAM.address,
+  //   parseEther("10000"),
+  //   parseEther("10000"),
+  //   parseEther("10000"),
+  //   parseEther("10000"),
+  //   deployer,
+  //   Date.now() + 100000000 / 1000
+  // );
+  // await tx.wait();
 
-  separator();
+  // separator();
 
-  console.log("Approving weth");
-  tx = await WETH.connect(deployerSigner).approve(Router.address, MAX_INT);
-  await tx.wait();
-  tx = await WETH.connect(deployerSigner).approve(RAMRouter.address, MAX_INT);
-  await tx.wait();
+  // console.log("Approving weth");
+  // tx = await WETH.connect(deployerSigner).approve(Router.address, MAX_INT);
+  // await tx.wait();
+  // tx = await WETH.connect(deployerSigner).approve(RAMRouter.address, MAX_INT);
+  // await tx.wait();
 
-  console.log("Adding liquidity to YGYWETH");
-  const weth = await ethers.getContractAt("WETH9", WETH.address);
-  tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("5") });
-  await tx.wait();
+  // console.log("Adding liquidity to YGYWETH");
+  // const weth = await ethers.getContractAt("WETH9", WETH.address);
+  // tx = await weth.connect(deployerSigner).deposit({ from: deployer, value: parseEther("5") });
+  // await tx.wait();
 
-  tx = await Router.addLiquidity(
-    YGY.address,
-    WETH.address,
-    parseEther("5000"),
-    parseEther("5"),
-    parseEther("5000"),
-    parseEther("5"),
-    deployer,
-    Date.now() + 1000000 / 1000
-  );
+  // tx = await Router.addLiquidity(
+  //   YGY.address,
+  //   WETH.address,
+  //   parseEther("5000"),
+  //   parseEther("5"),
+  //   parseEther("5000"),
+  //   parseEther("5"),
+  //   deployer,
+  //   Date.now() + 1000000 / 1000
+  // );
 
   await tx.wait();
 
@@ -376,13 +376,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await FeeApprover.sync();
   await tx.wait();
 
-  tx = await ChainLink.approve(RAMRouter.address, MAX_INT);
-  await tx.wait();
+  // tx = await ChainLink.approve(RAMRouter.address, MAX_INT);
+  // await tx.wait();
 
-  tx = await YGY.approve(RAMRouter.address, MAX_INT);
-  await tx.wait();
-  tx = await dXIOT.approve(RAMRouter.address, MAX_INT);
-  await tx.wait();
+  // tx = await YGY.approve(RAMRouter.address, MAX_INT);
+  // await tx.wait();
+  // tx = await dXIOT.approve(RAMRouter.address, MAX_INT);
+  // await tx.wait();
 
   // console.log("transferring DXIOT to router");
   // tx = await dXIOT.transfer(RAMRouter.address, parseEther("20000"));
