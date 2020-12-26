@@ -79,7 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const RAMVault = await ethers.getContractAt("RAMVault", VAULTPROXY.address, deployerSigner);
 
   // * SET FOR MAINNET
-  let teamAddr = deployer; // TODO: update to YGY team address
+  let teamAddr = "0xFC597788EF4D23a77081eA01Cf56f4cA340F546d";
   let devAddr = "0xA39d9eDDd61255828D965d8bEB7c9C63d4bA0EFB";
   let regeneratorAddr = "0x44C1758E5337BeFA9a95f051595857C99dF75052"; // REGENERATOR MAINNET
 
