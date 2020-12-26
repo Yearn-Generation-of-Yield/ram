@@ -78,8 +78,8 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
   )
     public
     VRFConsumerBase(
-      vrfAddr, // VRF Coordinator (KOVAN) 0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9,
-      linkAddr // LINK Token (KOVAN) 0xa36085F69e2889c224210F603D836748e7dC0088
+      vrfAddr,
+      linkAddr
     )
   {
     __Ownable_init();
@@ -90,9 +90,8 @@ contract RAMv1Router is StorageState, OwnableUpgradeSafe, VRFConsumerBase {
     _storage = YGYStorageV1(__storage);
 
     regenerator = _regenerator;
-    // TODO: Update to mainnet variables
-    keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
-    rngLinkFee = 0.1 * 10**18;
+    keyHash = 0xAA77729D3466CA35AE8D28B3BBAC7CC36A5031EFDC430821C02BC31A238AF445;
+    rngLinkFee = 2 * 10**18;
     regeneratorTax = 1;
   }
 
