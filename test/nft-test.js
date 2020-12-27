@@ -7,7 +7,7 @@ chai.should();
 const { setTestVars } = require("../scripts/setTestVars");
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
 
-const { parseEther, formatEther } = ethers.utils;
+const { parseEther, formatEther, parseUnits } = ethers.utils;
 const fetch = require("node-fetch");
 
 describe("NFT", function () {
@@ -51,7 +51,7 @@ describe("NFT", function () {
     await setTestVars(this, ethers, deployments);
     const endUsers = this.users.slice(4, this.users.length);
     // Transfer some tokens for users
-    this.userBaseYGYBalance = parseEther("1000");
+    this.userBaseYGYBalance = parseUnits("1000", 6);
     this.userBaseRAMBalance = parseEther("500");
     this.userLINKBalance = parseEther("200");
     await Promise.all(
@@ -81,6 +81,7 @@ describe("NFT", function () {
   it("mints a link nft to a RNG supplier", async () => {
     await this.ChainLink.connect(this.users[7].signer).approve(this.RAMRouter.address, MAX_INT);
     await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(123456).should.be.fulfilled;
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.be.fulfilled;
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
     const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.users[7].address));
     balance.should.equal(1);
@@ -132,7 +133,7 @@ describe("NFT", function () {
 
     await this.YGY.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
     // Auto-stake dude
-    await this.RAMRouter.connect(user1.signer).addLiquidityYGYOnly(parseEther("100"), true).should.be.fulfilled;
+    await this.RAMRouter.connect(user1.signer).addLiquidityYGYOnly(parseUnits("100", 6), true).should.be.fulfilled;
 
     // Get a LINK NFT by providing.
     await this.ChainLink.connect(user1.signer).approve(this.RAMRouter.address, MAX_INT);
@@ -274,6 +275,7 @@ describe("NFT", function () {
 
   it("cant trade a link card but can use it", async () => {
     await this.RAMRouter.selfRequestRandomNumber(123456).should.be.fulfilled;
+    await this.RAMRouter.connect(this.deployerSigner).claimLink().should.be.fulfilled;
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
     const balance = Number(await this.NFTFactory.balanceOf(LINKNFTAddress, this.deployer));
     balance.should.equal(1);
@@ -336,14 +338,15 @@ describe("NFT", function () {
     let ticketLevel = Number(await this.Storage.lastTicketLevel(user.address));
     ticketLevel.should.equal(1);
 
+    await this.dXIOT.transfer(user.address, parseEther("20"));
     // Deposit for rrrrrobot
-    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("0.1") }).should.be
+    await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("10") }).should.be
       .fulfilled;
 
-    await this.dXIOT.transfer(user.address, parseEther("20"));
+    await this.RAMRouter.connect(user.signer).claimRobot().should.be.fulfilled;
 
     const ROBOTNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.ROBOT);
-    let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user.address, 0).should.not.be.fulfilled;
+    let hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user.address, 0).should.be.fulfilled;
     await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: web3.utils.toWei("8") }).should.be
       .fulfilled;
     hasRobot = await this.NFTFactory.isOwner(ROBOTNFTAddress, user.address, 0).should.be.fulfilled;
@@ -379,6 +382,7 @@ describe("NFT", function () {
     // mock chainlink actually gets blockhash as as seed
     await this.ChainLink.connect(this.users[7].signer).approve(this.RAMRouter.address, MAX_INT);
     let linkTxs = await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(123456).should.be.fulfilled;
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.be.fulfilled;
     const receipt = await linkTxs.wait();
     console.log(receipt.events.map((event) => event));
     const LINKNFTAddress = await this.NFTFactory.contracts(this.NFTLocations.LINK);
@@ -395,6 +399,7 @@ describe("NFT", function () {
 
     // User one generates another random number, starting lottery round 2
     await this.RAMRouter.connect(this.users[7].signer).selfRequestRandomNumber(1234567).should.be.fulfilled;
+    await this.RAMRouter.connect(this.users[7].signer).claimLink().should.be.fulfilled;
     lotteryRoundCounter = Number(await this.RAMRouter.lotteryRoundCounter());
     lotteryRoundCounter.should.equal(2);
 
@@ -432,6 +437,7 @@ describe("NFT", function () {
     // User one generates another random number, starting 3rd lottery round
     await this.ChainLink.connect(user.signer).approve(this.RAMRouter.address, MAX_INT);
     await this.RAMRouter.connect(user.signer).selfRequestRandomNumber(12345678).should.be.fulfilled;
+    await this.RAMRouter.connect(user.signer).claimLink().should.be.fulfilled;
     lotteryRoundCounter = Number(await this.RAMRouter.lotteryRoundCounter());
     lotteryRoundCounter.should.equal(3);
 
@@ -449,6 +455,7 @@ describe("NFT", function () {
     // User one generates another random number, starting 4th lottery round
     await this.ChainLink.connect(user.signer).approve(this.RAMRouter.address, MAX_INT);
     await this.RAMRouter.connect(user.signer).selfRequestRandomNumber(123456789).should.be.fulfilled;
+    await this.RAMRouter.connect(user.signer).claimLink().should.be.fulfilled;
     lotteryRoundCounter = Number(await this.RAMRouter.lotteryRoundCounter());
     lotteryRoundCounter.should.equal(4);
 

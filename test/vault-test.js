@@ -5,10 +5,11 @@ const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 chai.should();
 const { setTestVars } = require("../scripts/setTestVars");
+const { formatUnits } = require("ethers/lib/utils");
 const MAX_INT = "11579208923731619542357098500868790785326998466564056403945758400791312963993";
-const { parseEther, formatEther } = ethers.utils;
+const { parseEther, formatEther, parseUnits } = ethers.utils;
 
-describe("Vault + Router", () => {
+describe.only("Vault + Router", () => {
   beforeEach(async () => {
     this.formatResult = (amount) => Number(formatEther(amount));
     const { deployer, teamaddr, devaddr, regeneratoraddr } = await getNamedAccounts();
@@ -39,7 +40,7 @@ describe("Vault + Router", () => {
     await setTestVars(this, ethers, deployments);
     const endUsers = this.users.slice(4, this.users.length);
     // Transfer some tokens for users
-    this.userBaseYGYBalance = parseEther("1000");
+    this.userBaseYGYBalance = parseUnits("1000", 6);
     this.userBaseRAMBalance = parseEther("1000");
     await Promise.all(
       endUsers.map(async ({ address }) => {
@@ -61,10 +62,10 @@ describe("Vault + Router", () => {
   it("RAMRouter: Should be able to add liquidity with only YGY", async () => {
     const user = this.users[4];
     const DepositAmount = 100;
-    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(parseEther(DepositAmount.toString()), false).should.be.fulfilled;
+    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(parseUnits(DepositAmount.toString(), 6), false).should.be.fulfilled;
     console.log(this.YGY.address, user.address);
     const balanceOfUser = await this.YGY.balanceOf(user.address);
-    (balanceOfUser / 1e18).should.be.equal(parseFloat(formatEther(this.userBaseYGYBalance)) - DepositAmount);
+    (balanceOfUser / 1e6).should.be.equal(parseFloat(formatUnits(this.userBaseYGYBalance, 6)) - DepositAmount);
 
     const YGYRAMBalanceOfUser = this.formatResult(await this.YGYRAMPair.balanceOf(user.address));
     console.log("YGYRAMBalance with 100 YGY deposit: ", YGYRAMBalanceOfUser);
@@ -89,7 +90,7 @@ describe("Vault + Router", () => {
     // await this.RAMVault.addPool(100, this.YGYRAMPair.address, true);
 
     // Add liquiditiess.
-    await this.RAMRouter.connect(user2.signer).addLiquidityYGYOnly(parseEther("100"), false);
+    await this.RAMRouter.connect(user2.signer).addLiquidityYGYOnly(parseUnits("100", 6), false);
     await this.RAMRouter.connect(user.signer).addLiquidityETHOnly(user.address, false, { value: parseEther("12") });
 
     const user1LPBalance = await this.YGYRAMPair.balanceOf(user.address);
@@ -129,7 +130,7 @@ describe("Vault + Router", () => {
     const userAfter = await this.Storage.userInfo(0, user.address);
     Number(userAfter.boostLevel).should.be.equal(2);
     (userAfter.amount / 1e18).should.be.equal(userBefore.amount / 1e18);
-    (userAfter.boostAmount / 1e18).should.be.equal((userAfter.amount / 1e18) * this.boostLevels[2]);
+    (userAfter.boostAmount / 1e18).should.be.closeTo((userAfter.amount / 1e18) * this.boostLevels[2], 0.000001);
 
     const poolAfterFirstBoost = await this.Storage.poolInfo(0);
     Number(poolAfterFirstBoost.effectiveAdditionalTokensFromBoosts).should.be.equal(Number(userAfter.boostAmount));
@@ -234,7 +235,7 @@ describe("Vault + Router", () => {
 
     // Advance time forward a month
     await time.increase(time.duration.weeks(4));
-    await this.RAMVault.connect(user.signer).withdraw(0, parseEther("1"));
+    await this.RAMVault.connect(user.signer).withdraw(0, parseEther("0.000000001"));
 
     const afterBalUser = (await this.RAM.balanceOf(user.address)) / 1e18;
     const afterBalVault = (await this.RAM.balanceOf(this.RAMVault.address)) / 1e18;
@@ -256,16 +257,16 @@ describe("Vault + Router", () => {
 
     // Approve and deposit
     await this.RAMRouter.addLiquidityETHOnly(user2.address, true, { value: parseEther("2") });
-    await this.RAMRouter.connect(user3.signer).addLiquidityYGYOnly(parseEther("40"), true);
+    await this.RAMRouter.connect(user3.signer).addLiquidityYGYOnly(parseUnits("40", 6), true);
     await this.RAMRouter.addLiquidityETHOnly(user3.address, true, { value: parseEther("3") });
     await this.RAMRouter.addLiquidityETHOnly(user2.address, true, { value: parseEther("10") });
-    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(parseEther("75"), true);
-    await this.RAMRouter.connect(user3.signer).addLiquidityYGYOnly(parseEther("40"), true);
+    await this.RAMRouter.connect(user.signer).addLiquidityYGYOnly(parseUnits("75", 6), true);
+    await this.RAMRouter.connect(user3.signer).addLiquidityYGYOnly(parseUnits("40", 6), true);
     await this.RAMRouter.addLiquidityETHOnly(user.address, false, { value: parseEther("2") });
     await this.RAMRouter.addLiquidityETHOnly(user3.address, false, { value: parseEther("2") });
 
     // Add ygy
-    const YGYrewards = parseEther("10000");
+    const YGYrewards = parseUnits("10000", 6);
     await this.YGY.approve(this.RAMVault.address, MAX_INT);
     await this.RAMVault.addYGYRewardsOwner(YGYrewards);
 
@@ -295,11 +296,11 @@ describe("Vault + Router", () => {
 
     console.table([
       ["User 1 ram balance before", beforeRamBalUser / 1e18],
-      ["User 1 ygy balance before", beforeBalYgyUser / 1e18],
+      ["User 1 ygy balance before", beforeBalYgyUser / 1e6],
       ["User 2 ram balance before", beforeRamBalUser2 / 1e18],
-      ["User 2 ygy balance before", beforeBalYgyUser2 / 1e18],
+      ["User 2 ygy balance before", beforeBalYgyUser2 / 1e6],
       ["Vault ram balance before", beforeBalRamVault / 1e18],
-      ["Vault ygy balance before", beforeBalYgyVault / 1e18],
+      ["Vault ygy balance before", beforeBalYgyVault / 1e6],
     ]);
 
     // Do some token transfers
@@ -374,11 +375,11 @@ describe("Vault + Router", () => {
     ]);
     console.table([
       ["User 1 ram balance after:", afterBalRamUser / 1e18],
-      ["User 1 ygy balance after:", afterBalRamYgyUser / 1e18],
+      ["User 1 ygy balance after:", afterBalRamYgyUser / 1e6],
       ["User 2 ram balance after:", afterBalRamUser2 / 1e18],
-      ["User 2 ygy balance after:", afterBalRamYgyUser2 / 1e18],
+      ["User 2 ygy balance after:", afterBalRamYgyUser2 / 1e6],
       ["Vault ram balance after", afterBalRamVault / 1e18],
-      ["Vault ygy balance after", afterBalYgyVault / 1e18],
+      ["Vault ygy balance after", afterBalYgyVault / 1e6],
     ]);
     afterBalRamUser.should.be.greaterThan(beforeRamBalUser);
     afterBalRamUser2.should.be.greaterThan(beforeRamBalUser2);
@@ -397,10 +398,10 @@ describe("Vault + Router", () => {
     ramTeamBalance.should.be.greaterThan(0);
     ramDevBalance.should.be.greaterThan(0);
     console.table([
-      ["Team YGY balance:", ygyTeamBalance],
-      ["Team RAM balance", ramTeamBalance],
-      ["Dev YGY balance:", ygyDevBalance],
-      ["Dev RAM balance", ramDevBalance],
+      ["Team YGY balance:", ygyTeamBalance / 1e6],
+      ["Team RAM balance", ramTeamBalance / 1e18],
+      ["Dev YGY balance:", ygyDevBalance / 1e6],
+      ["Dev RAM balance", ramDevBalance / 1e18],
     ]);
 
     // const cost = await this.RAMVault.calculateCost(1);

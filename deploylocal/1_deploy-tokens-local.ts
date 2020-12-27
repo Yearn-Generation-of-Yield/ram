@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { parseUnits } from "ethers/lib/utils";
 
 const separator = () => console.log("-----------------------------------------");
 
@@ -31,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const YGY = await deploy("YGY", {
     from: deployer,
     log: true,
-    args: ["YGY", "YGY", parseEther("2000000")],
+    args: [parseUnits("2000000", 6)],
   });
 
   separator();

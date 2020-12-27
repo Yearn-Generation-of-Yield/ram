@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
-import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
-import "hardhat/console.sol";
+import "./ERC20Preset.sol";
 
-contract YGY is ERC20PresetMinterPauser {
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint256 _initialSupply
-    ) public ERC20PresetMinterPauser(_name, _symbol) {
-        _mint(msg.sender, _initialSupply);
-    }
+contract YGY is ERC20Preset {
+  constructor(uint256 _initialSupply) public ERC20Preset("YGY", "YGY", 6) {
+    _mint(msg.sender, _initialSupply);
+  }
 }

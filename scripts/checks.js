@@ -24,7 +24,7 @@ async function main() {
   console.log("Adding liquidity YGY");
   await weth.approve(RAMRouter.address, ethers.utils.parseEther("1000000000"));
   await weth.approve(UNIRouter.address, ethers.utils.parseEther("1000000000"));
-  const tx = await RAMRouter.connect(deployerSigner).addLiquidityYGYOnly(ethers.utils.parseEther("10"), true);
+  const tx = await RAMRouter.connect(deployerSigner).addLiquidityYGYOnly(ethers.utils.parseUnis("10", 6), true);
   const rec = await tx.wait();
   console.log(rec);
 }

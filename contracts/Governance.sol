@@ -16,6 +16,7 @@ contract Governance {
   uint256 public lastRAMRouterUpdateTime; // Last time the regenerator tax on the router was updated
   bool public updateStagingMode;
   uint256 public updateStagingReadyTime;
+  address public owner;
 
   struct User {
     uint256 number; // Number from 1-8 indicating the desired LGE regenerator tax %
@@ -39,6 +40,12 @@ contract Governance {
     YGYToken = IERC20(_YGYToken);
     RAMRouter = IRAMv1Router(_RAMRouter);
     weightedNumber = 1; // start at 1%
+    owner = msg.sender;
+  }
+
+  function updateRouter(address _RAMRouter) external {
+    require(msg.sender == owner, "!Owner");
+    RAMRouter = IRAMv1Router(_RAMRouter);
   }
 
   function hasTimeLockAtLevel(address user, uint256 level)

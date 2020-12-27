@@ -1,3 +1,4 @@
+import { parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
@@ -17,7 +18,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //@ts-ignore
   const YGY = await ethers.getContractAt("YGY", "0x11b0a8C0FA626627601eD518c3538a39d92D609E", deployerSigner);
   //@ts-ignore
-  const RAM = await ethers.getContract("RAM");
+  const RAM = await ethers.getContractAt("RAM", "0xddec5cb890b066891151e5f6ffca101b4eb47409", deployerSigner);
   //@ts-ignore
   const WETH = await ethers.getContractAt("WETH9", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", deployerSigner);
   //@ts-ignore
@@ -25,18 +26,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //@ts-ignore
   const ChainLink = await ethers.getContractAt("YGY", "0x514910771af9ca656af840dff83e8264ecf986ca", deployerSigner);
 
-  separator();
+  // separator();
 
   /** STORAGE DEPLOY */
   const YGYSTORAGE = await deploy("YGYStorageV1", {
     from: deployer,
+    log: true,
   });
   separator();
 
-  // Deployed instance
+  // // Deployed instance
   const YGYStorage = await ethers.getContractAt("YGYStorageV1", YGYSTORAGE.address, deployerSigner);
 
-  // Init for access control
+  // // Init for access control
   let tx = await YGYStorage.init();
   await tx.wait();
   console.log("YGYStorage initialized");
@@ -56,7 +58,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   separator();
 
-  // just sets boost values for storage..
+  // // just sets boost values for storage..
   tx = await YGYStorage.initializeRAMVault();
   await tx.wait();
   console.log("Initialized RAM vault values in storage");
@@ -69,10 +71,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   separator();
 
-  const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address, deployerSigner);
-  tx = await VaultProxy.setup(RAMVAULT.address, YGYStorage.address);
+  // @ts-ignore
+  const VaultProxy = await ethers.getContractAt("VaultProxy", VAULTPROXY.address);
+  // @ts-ignore
+  let tx = await VaultProxy.setup("0x7af2a68da367d8b6621ff6e15b911dbab0d94483", YGYStorage.address);
   await tx.wait();
-  console.log("Proxy initialized at", VaultProxy.address, "with implementation of vault at:", RAMVAULT.address);
+  console.log("Proxy initialized at", VaultProxy.address, "with implementation of vault at:", "0x7af2a68da367d8b6621ff6e15b911dbab0d94483");
   separator();
 
   // Deployed instance using proxy
@@ -85,7 +89,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await RAMVault.initialize(deployer, regeneratorAddr, devAddr, teamAddr, NFTFACTORY.address);
   await tx.wait();
-  //
+  // //
   console.log("Initialized ram vault itself through proxy.");
   console.log("DEV:", devAddr, "TEAM", teamAddr, "regenerator", regeneratorAddr);
   separator();
@@ -242,16 +246,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Total NFTs deployed: ", nfts.length);
   separator();
 
-  /** GENERATE YGY-WETH UNI PAIR   (TEST-ONLY) */
-  const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
-  const txres = await pairtx1.wait();
+  // /** GENERATE YGY-WETH UNI PAIR   (TEST-ONLY) */
+  // // const pairtx1 = await UNIFactory.createPair(WETH.address, YGY.address, { from: deployer });
+  // // const txres = await pairtx1.wait();
 
-  // Pair address is third arg for the PairCreated event.
-  const YGYWETHAddr = txres.events[0].args[2];
+  // // Pair address is third arg for the PairCreated event.
+  const YGYWETHAddr = "0xa568b6f1173d6c6affd12655ac0eb22f766bbdb0";
   const YGYRAMAddr = await RAM.tokenUniswapPair();
   const YGYRAMPair = await ethers.getContractAt("UniswapV2Pair", YGYRAMAddr);
   const YGYWETHPair = await ethers.getContractAt("UniswapV2Pair", YGYWETHAddr);
-  console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHPair.address, "YGYRAM:", YGYRAMPair.address);
+  // console.log("Uniswap pairs created - ", "YGYWETH:", YGYWETHPair.address, "YGYRAM:", YGYRAMPair.address);
 
   separator();
   /** FEEAPPROVER */
@@ -264,7 +268,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Feeapprover instance
   const FeeApprover = await ethers.getContractAt("FeeApprover", FEEAPPROVER.address, deployerSigner);
 
-  // Now we can initialize the FeeApprover contract
+  // // Now we can initialize the FeeApprover contract
   tx = await FeeApprover.initialize(RAM.address, YGY.address, UNIFactory.address, RAMVault.address);
   await tx.wait();
   console.log("FeeApprover initialized");
@@ -275,7 +279,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Set tokens to storage
   tx = await YGYStorage.setTokens(RAM.address, YGY.address, WETH.address, YGYRAMPair.address, YGYWETHPair.address, nfts, dXIOT.address);
   await tx.wait();
-  /** ROUTER */
+  // /** ROUTER */
   const ROUTERConstructor = [
     UNIFactory.address,
     FEEAPPROVER.address,
@@ -322,8 +326,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("FeeDistributor and transferChecker set on RAM token");
   separator();
 
-  // SET MAINNETs
-  const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+  // // SET MAINNETs
+  // const Router = await ethers.getContractAt("UniswapV2Router02", "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
 
   // console.log("Approving RAM & YGY for UNI Routter");
   // tx = await RAM.approve(Router.address, parseEther("1000000000000000000"));
@@ -335,9 +339,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // tx = await Router.addLiquidity(
   //   YGY.address,
   //   RAM.address,
+  //   parseUnits("1250", 6),
   //   parseEther("10000"),
-  //   parseEther("10000"),
-  //   parseEther("10000"),
+  //   parseUnits("1250", 6),
   //   parseEther("10000"),
   //   deployer,
   //   Date.now() + 100000000 / 1000
@@ -368,13 +372,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //   Date.now() + 1000000 / 1000
   // );
 
-  await tx.wait();
+  // await tx.wait();
 
-  tx = await YGYRAMPair.sync();
-  await tx.wait();
+  // tx = await YGYRAMPair.sync();
+  // await tx.wait();
 
-  tx = await FeeApprover.sync();
-  await tx.wait();
+  // tx = await FeeApprover.sync();
+  // await tx.wait();
 
   // tx = await ChainLink.approve(RAMRouter.address, MAX_INT);
   // await tx.wait();
@@ -391,22 +395,26 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await NFTFactory.bondContract(RAMRouter.address);
   await tx.wait();
 
-  // Deploy governance contract and set on router
-  const GOVERNANCEArgs = [YGY.address, RAMRouter.address];
-  const GOVERNANCE = await deploy("Governance", {
-    from: deployer,
-    log: true,
-    args: GOVERNANCEArgs,
-  });
-  separator();
+  // // Deploy governance contract and set on router
+  // const GOVERNANCEArgs = [YGY.address, RAMRouter.address];
+  // const GOVERNANCE = await deploy("Governance", {
+  //   from: deployer,
+  //   log: true,
+  //   args: GOVERNANCEArgs,
+  // });
+  // separator();
 
-  tx = await RAMRouter.setGovernance(GOVERNANCE.address);
+  const Governance = await ethers.getContractAt("Governance", "0x7E806e9166B3367c6f7E5bDE995258eF35Eb1527");
+  tx = await RAMRouter.setGovernance(Governance.address);
   await tx.wait();
-  console.log("Governance set in RAMRouter at: ", GOVERNANCE.address);
+  console.log("Governance set in RAMRouter at: ", Governance.address);
   separator();
 
-  console.log("Adding a pool for", YGYRAMPair.address);
+  // console.log("Adding a pool for", YGYRAMPair.address);
   tx = await RAMVault.addPool(100, YGYRAMPair.address, true);
+  await tx.wait();
+
+  tx = Governance.updateRouter(RAMRouter.address);
   await tx.wait();
 
   const all = await deployments.all();
@@ -414,24 +422,30 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   for (const deployment in all) {
     console.log(deployment, all[deployment].address);
   }
-  separator();
-  if (hre.network.name !== "hardhat") {
-    console.log("trying to verify..");
-    console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
-    await hre.run("verify", {
-      network: hre.network.name,
-      address: RAMROUTER.address,
-      constructorArguments: ROUTERConstructor,
-    });
+  // separator();
+  // if (hre.network.name !== "hardhat") {
+  //   console.log("trying to verify..");
+  //   console.log("RAMRouter at:", RAMROUTER.address, "verifying...");
+  //   await hre.run("verify", {
+  //     network: hre.network.name,
+  //     address: NFTFACTORY.address,
+  //     constructorArguments: [YGYStorage.address],
+  //   });
 
-    console.log("trying to verify  governance..");
-    console.log("Governance at:", GOVERNANCE.address, "verifying...");
-    await hre.run("verify", {
-      network: hre.network.name,
-      address: GOVERNANCE.address,
-      constructorArguments: GOVERNANCEArgs,
-    });
-  }
+  //   await hre.run("verify", {
+  //     network: hre.network.name,
+  //     address: RAMROUTER.address,
+  //     constructorArguments: ROUTERConstructor,
+  //   });
+
+  //   console.log("trying to verify  governance..");
+  //   console.log("Governance at:", GOVERNANCE.address, "verifying...");
+  //   await hre.run("verify", {
+  //     network: hre.network.name,
+  //     address: GOVERNANCE.address,
+  //     constructorArguments: GOVERNANCEArgs,
+  //   });
+  // }
 };
 
 export default func;

@@ -7,6 +7,7 @@ import "hardhat-deploy-ethers";
 import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import { removeConsoleLog } from "hardhat-preprocessor";
+import { mainnetPrivateKey } from "./password";
 
 const { mainnetProvider, kovanProvider, privateKey, etherscanApiKey, kovanPrivateKey } = require("./password");
 
@@ -17,6 +18,12 @@ module.exports = {
     kovan: {
       url: kovanProvider,
       accounts: [kovanPrivateKey],
+    },
+    mainnet: {
+      url: mainnetProvider,
+      accounts: [mainnetPrivateKey],
+      gasPrice: 90000000000,
+      gas: 4700000,
     },
   },
   solidity: {
